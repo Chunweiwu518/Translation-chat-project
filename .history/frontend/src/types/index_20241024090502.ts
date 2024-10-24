@@ -9,7 +9,7 @@ export interface FileWithOptions {
   file: File;
   name: string;
   needTranslation: boolean;
-  status: 'pending' | 'translating' | 'embedding' | 'completed' | 'error';
+  status: "pending" | "processing" | "completed" | "error";
   progress: number;
   selected: boolean;
   content?: string;

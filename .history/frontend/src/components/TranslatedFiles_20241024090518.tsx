@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { TranslatedFile } from "../types";
+import React, { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { TranslatedFile } from '../types';
 
 interface TranslatedFilesProps {
   files: TranslatedFile[];
@@ -30,7 +30,7 @@ export const TranslatedFiles: React.FC<TranslatedFilesProps> = ({
               <div>
                 <h4 className="font-medium">{file.name}</h4>
                 <p className="text-sm text-gray-500">
-                  狀態: {file.isEmbedded ? "已加入知識庫" : "未加入知識庫"}
+                  狀態: {file.isEmbedded ? '已加入知識庫' : '未加入知識庫'}
                 </p>
               </div>
               <div className="space-x-2 flex items-center">
@@ -55,7 +55,7 @@ export const TranslatedFiles: React.FC<TranslatedFilesProps> = ({
                 )}
               </div>
             </div>
-
+            
             {!file.isEmbedded && file.embeddingProgress !== undefined && (
               <div className="px-4 pb-2">
                 <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -69,7 +69,7 @@ export const TranslatedFiles: React.FC<TranslatedFilesProps> = ({
                 </p>
               </div>
             )}
-
+            
             {expandedFileId === file.id && (
               <div className="px-4 pb-4">
                 <div className="p-3 bg-gray-50 rounded max-h-[400px] overflow-y-auto">
