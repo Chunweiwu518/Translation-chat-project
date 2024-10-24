@@ -64,13 +64,13 @@ def add_translated_content_to_vector_store(
 def delete_from_vector_store(vector_store: Chroma, metadata_filter: Dict) -> bool:
     """從向量存儲中刪除內容"""
     try:
+        # 先獲取匹配的文檔
         matching_docs = vector_store.get(where=metadata_filter)
 
         if matching_docs and matching_docs["ids"]:
+            # 刪除文檔
             vector_store.delete(ids=matching_docs["ids"])
-
             vector_store.persist()
-
             print(f"已刪除文檔，IDs: {matching_docs['ids']}")
             return True
         else:
@@ -79,6 +79,11 @@ def delete_from_vector_store(vector_store: Chroma, metadata_filter: Dict) -> boo
 
     except Exception as e:
         print(f"刪除文檔時出錯: {str(e)}")
+        # 嘗試關閉和重新初始化 vector store
+        try:
+            vector_store._client.close()
+        except:
+            pass
         raise e
 
 
@@ -90,10 +95,22 @@ def reset_vector_store(vector_store: Chroma) -> bool:
             vector_store.delete(ids=all_docs["ids"])
             vector_store.persist()
             print("已清空向量數據庫")
+            # 嘗試關閉數據庫連接
+            try:
+                vector_store._client.close()
+            except:
+                pass
         return True
     except Exception as e:
         print(f"重置數據庫時出錯: {str(e)}")
+        # 嘗試關閉數據庫連接
+        try:
+            vector_store._client.close()
+        except:
+            pass
         raise e
+
+
 def add_content_to_vector_store(
     vector_store: Chroma, content: str, metadata: Dict = None
 ) -> str:
@@ -105,9 +122,7 @@ def add_content_to_vector_store(
             else metadata["doc_id"]
         )
 
-        vector_store.add_texts(
-            texts=[content], metadatas=[metadata], ids=[doc_id]
-        )
+        vector_store.add_texts(texts=[content], metadatas=[metadata], ids=[doc_id])
 
         vector_store.persist()
 
@@ -117,6 +132,7 @@ def add_content_to_vector_store(
     except Exception as e:
         print(f"添加文檔時出錯: {str(e)}")
         raise e
+
 
 def query_knowledge_base(
     vector_store: Chroma,
@@ -186,3 +202,76 @@ if __name__ == "__main__":
     print("RAG 系統初始化完成")
 
     # 測試代碼...
+import unittest
+from pathlib import Path
+
+
+class TestRAGSystem(unittest.TestCase):
+    def setUp(self):
+        """在每個測試開始前執行，初始化RAG系統"""
+        self.vector_store, self.ffm = initialize_rag()
+        self.test_content = "這是一段測試的文本內容"
+        self.translated_content = "這是一段翻譯的文本內容"
+        self.metadata = {"doc_id": "test-doc", "source": "test"}
+
+    def tearDown(self):
+        """在每個測試結束後清理數據"""
+        reset_vector_store(self.vector_store)
+
+    def test_initialize_rag(self):
+        """測試 RAG 系統初始化"""
+        self.assertIsNotNone(self.vector_store, "向量存儲初始化失敗")
+        self.assertIsNotNone(self.ffm, "FFM 模型初始化失敗")
+
+    def test_add_and_query_translated_content(self):
+        """測試添加翻譯內容並進行查詢"""
+        doc_id = add_translated_content_to_vector_store(
+            self.vector_store, self.translated_content, metadata=self.metadata
+        )
+        self.assertIsNotNone(doc_id, "添加文檔失敗")
+
+        # 測試查詢功能
+        query = "翻譯的文本內容"
+        response = query_knowledge_base(
+            self.vector_store, self.ffm, query, model_settings=None
+        )
+        self.assertIn("翻譯的文本內容", response, "查詢結果錯誤或沒有返回結果")
+
+    def test_add_and_delete_content(self):
+        """測試添加和刪除內容"""
+        doc_id = add_content_to_vector_store(
+            self.vector_store, self.test_content, metadata=self.metadata
+        )
+        self.assertIsNotNone(doc_id, "添加文檔失敗")
+
+        # 刪除文檔
+        delete_success = delete_from_vector_store(self.vector_store, {"doc_id": doc_id})
+        self.assertTrue(delete_success, "刪除文檔失敗")
+
+        # 查詢應該找不到內容
+        query = "測試的文本內容"
+        response = query_knowledge_base(
+            self.vector_store, self.ffm, query, model_settings=None
+        )
+        self.assertNotIn("測試的文本內容", response, "文檔未成功刪除")
+
+    def test_reset_vector_store(self):
+        """測試重置向量存儲"""
+        add_content_to_vector_store(
+            self.vector_store, self.test_content, metadata=self.metadata
+        )
+
+        # 重置向量存儲
+        reset_success = reset_vector_store(self.vector_store)
+        self.assertTrue(reset_success, "重置向量存儲失敗")
+
+        # 查詢應該找不到內容
+        query = "測試的文本內容"
+        response = query_knowledge_base(
+            self.vector_store, self.ffm, query, model_settings=None
+        )
+        self.assertNotIn("測試的文本內容", response, "重置後文檔未成功刪除")
+
+
+if __name__ == "__main__":
+    unittest.main()

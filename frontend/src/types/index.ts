@@ -34,7 +34,8 @@ export interface ModelSettings {
   topP: number;
   frequencyPenalty: number;
   seed: number;
-  topK: number;
+  topK_RAG: number;
+  topK_model: number;
   similarityThreshold: number;
 }
 

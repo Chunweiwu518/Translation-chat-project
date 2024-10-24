@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import time
 import uuid
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -50,6 +51,31 @@ class QueryRequest(BaseModel):
 
 class ProgressMessage(BaseModel):
     progress: int
+
+
+def safely_delete_directory(path: Path):
+    """安全地刪除目錄，包括等待和重試機制"""
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        try:
+            if path.exists():
+                # 先嘗試刪除 sqlite 文件
+                sqlite_file = path / "chroma.sqlite3"
+                if sqlite_file.exists():
+                    sqlite_file.unlink()
+
+                # 等待一下
+                time.sleep(1)
+
+                # 刪除整個目錄
+                shutil.rmtree(path)
+            return True
+        except Exception as e:
+            print(f"刪除嘗試 {attempt + 1} 失敗: {str(e)}")
+            if attempt < max_attempts - 1:
+                time.sleep(2)  # 在重試之前等待
+            else:
+                raise
 
 
 app = FastAPI()
@@ -130,6 +156,7 @@ def allowed_file(filename: str) -> bool:
     )
 
 
+# 知識庫相關的API路由
 @app.get("/api/knowledge_bases")
 async def get_knowledge_bases():
     knowledge_bases = load_knowledge_bases()
@@ -154,6 +181,7 @@ async def create_knowledge_base(kb: KnowledgeBase):
         }
         save_knowledge_bases(knowledge_bases)
 
+        # 初始化新知識庫的向量存儲
         initialize_vector_store(str(kb_path))
 
         return {"id": kb_id, "name": kb.name, "description": kb.description}
@@ -172,17 +200,43 @@ async def delete_knowledge_base(kb_id: str):
             raise HTTPException(status_code=404, detail="知識庫不存在")
 
         kb_path = Path(knowledge_bases[kb_id]["path"])
-        if kb_path.exists():
-            shutil.rmtree(kb_path)
 
+        # 1. 首先關閉當前的向量存儲連接
+        global vector_store
+        if kb_id == Config.current_kb_id:
+            try:
+                vector_store._client.close()
+                vector_store = None
+            except:
+                pass
+            # 重新初始化默認知識庫
+            vector_store = initialize_vector_store(
+                str(Path(Config.CHROMA_PATH) / "default")
+            )
+            Config.current_kb_id = "default"
+
+        # 2. 嘗試安全刪除目錄
+        try:
+            safely_delete_directory(kb_path)
+        except Exception as e:
+            print(f"刪除知識庫目錄失敗: {str(e)}")
+            # 如果刪除失敗，我們至少更新配置
+            pass
+
+        # 3. 更新配置文件
         del knowledge_bases[kb_id]
         save_knowledge_bases(knowledge_bases)
+
+        # 4. 清理可能的臨時文件
+        import gc
+
+        gc.collect()  # 強制垃圾回收
 
         return {"success": True}
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"刪除知識庫時出錯: {str(e)}")
 
 
 @app.post("/api/knowledge_base/switch/{kb_id}")
@@ -193,6 +247,13 @@ async def switch_knowledge_base(kb_id: str):
             raise HTTPException(status_code=404, detail="知識庫不存在")
 
         global vector_store
+        # 先嘗試關閉現有連接
+        try:
+            if vector_store is not None:
+                vector_store._client.close()
+        except:
+            pass
+
         vector_store = initialize_vector_store(knowledge_bases[kb_id]["path"])
         Config.current_kb_id = kb_id
 
@@ -213,6 +274,11 @@ async def reset_knowledge_base(kb_id: str):
         else:
             temp_store = initialize_vector_store(knowledge_bases[kb_id]["path"])
             reset_vector_store(temp_store)
+            # 清理臨時存儲
+            try:
+                temp_store._client.close()
+            except:
+                pass
 
         return {"success": True}
     except Exception as e:
@@ -315,6 +381,7 @@ async def embed_content(request: EmbedRequest):
         if kb_id not in knowledge_bases:
             raise HTTPException(status_code=404, detail="知識庫不存在")
 
+        global vector_store
         if kb_id != Config.current_kb_id:
             temp_store = initialize_vector_store(knowledge_bases[kb_id]["path"])
             doc_id = add_translated_content_to_vector_store(
@@ -326,6 +393,11 @@ async def embed_content(request: EmbedRequest):
                     "doc_id": str(uuid.uuid4()),
                 },
             )
+            # 清理臨時存儲
+            try:
+                temp_store._client.close()
+            except:
+                pass
         else:
             doc_id = add_translated_content_to_vector_store(
                 vector_store,
@@ -349,9 +421,15 @@ async def delete_file_from_knowledge_base(kb_id: str, file_id: str):
         if kb_id not in knowledge_bases:
             raise HTTPException(status_code=404, detail="知識庫不存在")
 
+        global vector_store
         if kb_id != Config.current_kb_id:
             temp_store = initialize_vector_store(knowledge_bases[kb_id]["path"])
             success = delete_from_vector_store(temp_store, {"doc_id": file_id})
+            # 清理臨時存儲
+            try:
+                temp_store._client.close()
+            except:
+                pass
         else:
             success = delete_from_vector_store(vector_store, {"doc_id": file_id})
 
@@ -372,24 +450,50 @@ async def query(request: QueryRequest):
         if kb_id not in knowledge_bases:
             raise HTTPException(status_code=404, detail="知識庫不存在")
 
-        vector_store = initialize_vector_store(knowledge_bases[kb_id]["path"])
+        global vector_store
+        current_vector_store = None
 
-        answer = query_knowledge_base(
-            vector_store=vector_store,
-            ffm=ffm,
-            query=request.query,
-            model_settings=request.model_settings,
-        )
+        if kb_id != Config.current_kb_id:
+            current_vector_store = initialize_vector_store(
+                knowledge_bases[kb_id]["path"]
+            )
+        else:
+            current_vector_store = vector_store
 
-        top_k = (
-            request.model_settings.get("parameters", {}).get("topK", 3)
-            if request.model_settings
-            else 3
-        )
-        docs = vector_store.similarity_search(request.query, k=top_k)
-        chunks = [doc.page_content for doc in docs]
+        try:
+            answer = query_knowledge_base(
+                vector_store=current_vector_store,
+                ffm=ffm,
+                query=request.query,
+                model_settings=request.model_settings,
+            )
 
-        return {"answer": answer, "relevant_chunks": chunks}
+            # 獲取相關文件片段
+            top_k = (
+                request.model_settings.get("parameters", {}).get("topK", 3)
+                if request.model_settings
+                else 3
+            )
+            docs = current_vector_store.similarity_search(request.query, k=top_k)
+            chunks = [doc.page_content for doc in docs]
+
+            # 如果使用了臨時向量存儲，清理它
+            if kb_id != Config.current_kb_id and current_vector_store:
+                try:
+                    current_vector_store._client.close()
+                except:
+                    pass
+
+            return {"answer": answer, "relevant_chunks": chunks}
+
+        finally:
+            # 確保在出現錯誤時也能清理臨時向量存儲
+            if kb_id != Config.current_kb_id and current_vector_store:
+                try:
+                    current_vector_store._client.close()
+                except:
+                    pass
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -416,5 +520,10 @@ if __name__ == "__main__":
                 }
             }
         )
+
+    # 創建 translations 目錄（如果需要）
+    translations_path = Path("translations")
+    if not translations_path.exists():
+        translations_path.mkdir(parents=True)
 
     uvicorn.run(app, host="0.0.0.0", port=5000)

@@ -43,10 +43,10 @@ const App: React.FC = () => {
     topP: 0.9,
     frequencyPenalty: 0.0,
     seed: 42,
-    topK: 3,
+    topK_model: 0.3,
+    topK_RAG: 3,
     similarityThreshold: 0.7,
   });
-
   useEffect(() => {
     fetchKnowledgeBases();
   }, []);
@@ -113,6 +113,63 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUploadAndEmbed = async (file: File, needTranslation: boolean) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      // 根據是否需要翻譯選擇不同的端點
+      const uploadEndpoint = needTranslation
+        ? "http://localhost:5000/api/upload_and_translate"
+        : "http://localhost:5000/api/upload";
+
+      const uploadResponse = await fetch(uploadEndpoint, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (uploadResponse.ok) {
+        const data = await uploadResponse.json();
+        const content = needTranslation
+          ? data.translated_content
+          : data.content;
+
+        // 直接進行 embedding
+        const embedResponse = await fetch("http://localhost:5000/api/embed", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: content,
+            filename: file.name,
+            knowledge_base_id: currentKnowledgeBase,
+          }),
+        });
+
+        if (embedResponse.ok) {
+          // 添加一個系統消息通知用戶
+          setMessages((prev) => [
+            ...prev,
+            {
+              sender: "system",
+              text: `文件 "${file.name}" 已成功添加到知識庫中。`,
+            },
+          ]);
+        }
+      }
+    } catch (error) {
+      console.error("處理文件時出錯:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "system",
+          text: `處理文件 "${file.name}" 時出錯。請稍後重試。`,
+        },
+      ]);
+    }
+  };
+
   const handleBatchEmbed = async (
     fileIds: string[],
     targetKnowledgeBaseId: string
@@ -167,7 +224,6 @@ const App: React.FC = () => {
       }
     }
   };
-
   const createNewChatSession = () => {
     const newSession: ChatSession = {
       id: Date.now().toString(),
@@ -207,7 +263,8 @@ const App: React.FC = () => {
               top_p: modelSettings.topP,
               frequency_penalty: modelSettings.frequencyPenalty,
               seed: modelSettings.seed,
-              topK: modelSettings.topK,
+              topK_model: modelSettings.topK_model,
+              topK_RAG: modelSettings.topK_RAG,
               similarityThreshold: modelSettings.similarityThreshold,
             },
           },
@@ -266,6 +323,107 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteKnowledgeBase = async (id: string) => {
+    if (!window.confirm("確定要刪除此知識庫嗎？此操作無法恢復。")) {
+      return;
+    }
+
+    try {
+      // 添加載入狀態
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "system",
+          text: "正在刪除知識庫...",
+        },
+      ]);
+
+      const response = await fetch(
+        `http://localhost:5000/api/knowledge_base/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        // 如果刪除的是當前知識庫，切換到默認知識庫
+        if (id === currentKnowledgeBase) {
+          setCurrentKnowledgeBase("default");
+          setMessages([]);
+        }
+
+        // 更新已嵌入文件的列表
+        setTranslatedFiles((prev) =>
+          prev.filter((file) => file.knowledgeBaseId !== id)
+        );
+
+        // 重新獲取知識庫列表
+        await fetchKnowledgeBases();
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "system",
+            text: "知識庫已成功刪除。",
+          },
+        ]);
+      } else {
+        // 如果響應不成功，嘗試讀取錯誤信息
+        let errorMessage = "刪除知識庫失敗";
+        try {
+          const errorData = await response.json();
+          errorMessage = `刪除知識庫失敗: ${errorData.detail || "未知錯誤"}`;
+        } catch {
+          errorMessage = `刪除知識庫失敗: HTTP ${response.status}`;
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "system",
+            text: errorMessage,
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("刪除知識庫出錯:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "system",
+          text: "刪除知識庫時發生錯誤，請稍後重試。",
+        },
+      ]);
+    }
+  };
+
+  const handleResetKnowledgeBase = async (id: string) => {
+    if (
+      window.confirm("確定要重置此知識庫嗎？所有檔案將被移除，此操作無法恢復。")
+    ) {
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/knowledge_base/reset/${id}`,
+          {
+            method: "POST",
+          }
+        );
+
+        if (response.ok) {
+          // 如果重置的是當前知識庫，清空對話
+          if (id === currentKnowledgeBase) {
+            setMessages([]);
+          }
+          // 更新已嵌入文件的列表
+          setTranslatedFiles((prev) =>
+            prev.filter((file) => file.knowledgeBaseId !== id)
+          );
+        }
+      } catch (error) {
+        console.error("重置知識庫失敗:", error);
+      }
+    }
+  };
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar
@@ -312,6 +470,7 @@ const App: React.FC = () => {
             <Chat
               messages={messages}
               onSendMessage={handleSendMessage}
+              onClearChat={() => setMessages([])}
               currentKnowledgeBaseName={
                 knowledgeBases.find((kb) => kb.id === currentKnowledgeBase)
                   ?.name || ""
@@ -340,6 +499,9 @@ const App: React.FC = () => {
                   console.error("創建知識庫失敗:", error);
                 }
               }}
+              onResetKnowledgeBase={handleResetKnowledgeBase}
+              onDeleteKnowledgeBase={handleDeleteKnowledgeBase}
+              onUploadAndEmbed={handleUploadAndEmbed}
             />
           </div>
         )}
