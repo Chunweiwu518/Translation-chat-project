@@ -1,18 +1,27 @@
+# 標準庫導入
 import json
 import os
 import shutil
-import time
 import uuid
+import time
+import gc
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import pdfplumber
-from config import Config
-from docx import Document
-from fastapi import FastAPI, File, HTTPException, UploadFile
+# 第三方庫導入
+import pdfplumber  # pip install pdfplumber
+from python-docx import Document  # pip install python-docx
+import sqlite3
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.websockets import WebSocket
 from pydantic import BaseModel
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.document_loaders import PyPDFLoader
+import chromadb  # pip install chromadb
+from chromadb.config import Settings
+
+# 本地模組導入
+from config import Config
 from rag_utils import (
     add_translated_content_to_vector_store,
     delete_from_vector_store,

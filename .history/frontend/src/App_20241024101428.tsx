@@ -324,76 +324,61 @@ const App: React.FC = () => {
   };
 
   const handleDeleteKnowledgeBase = async (id: string) => {
-    if (!window.confirm("確定要刪除此知識庫嗎？此操作無法恢復。")) {
+    if (!window.confirm('確定要刪除此知識庫嗎？此操作無法恢復。')) {
       return;
     }
-
+  
     try {
       // 添加載入狀態
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "system",
-          text: "正在刪除知識庫...",
-        },
-      ]);
-
-      const response = await fetch(
-        `http://localhost:5000/api/knowledge_base/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
-
+      setMessages(prev => [...prev, {
+        sender: 'system',
+        text: '正在刪除知識庫...'
+      }]);
+  
+      const response = await fetch(`http://localhost:5000/api/knowledge_base/${id}`, {
+        method: 'DELETE'
+      });
+      
       if (response.ok) {
         // 如果刪除的是當前知識庫，切換到默認知識庫
         if (id === currentKnowledgeBase) {
-          setCurrentKnowledgeBase("default");
+          setCurrentKnowledgeBase('default');
           setMessages([]);
         }
-
+        
         // 更新已嵌入文件的列表
-        setTranslatedFiles((prev) =>
-          prev.filter((file) => file.knowledgeBaseId !== id)
+        setTranslatedFiles(prev => 
+          prev.filter(file => file.knowledgeBaseId !== id)
         );
-
+        
         // 重新獲取知識庫列表
         await fetchKnowledgeBases();
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            sender: "system",
-            text: "知識庫已成功刪除。",
-          },
-        ]);
+        
+        setMessages(prev => [...prev, {
+          sender: 'system',
+          text: '知識庫已成功刪除。'
+        }]);
       } else {
         // 如果響應不成功，嘗試讀取錯誤信息
-        let errorMessage = "刪除知識庫失敗";
+        let errorMessage = '刪除知識庫失敗';
         try {
           const errorData = await response.json();
-          errorMessage = `刪除知識庫失敗: ${errorData.detail || "未知錯誤"}`;
+          errorMessage = `刪除知識庫失敗: ${errorData.detail || '未知錯誤'}`;
         } catch {
           errorMessage = `刪除知識庫失敗: HTTP ${response.status}`;
         }
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            sender: "system",
-            text: errorMessage,
-          },
-        ]);
+        
+        setMessages(prev => [...prev, {
+          sender: 'system',
+          text: errorMessage
+        }]);
       }
     } catch (error) {
-      console.error("刪除知識庫出錯:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "system",
-          text: "刪除知識庫時發生錯誤，請稍後重試。",
-        },
-      ]);
+      console.error('刪除知識庫出錯:', error);
+      setMessages(prev => [...prev, {
+        sender: 'system',
+        text: '刪除知識庫時發生錯誤，請稍後重試。'
+      }]);
     }
   };
 

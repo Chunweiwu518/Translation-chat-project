@@ -1,15 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  ChevronDown,
-  ChevronUp,
-  Settings,
-  Database,
-  PlusCircle,
-  Trash2,
-  RefreshCw,
-  Paperclip,
-} from "lucide-react";
-import { Message, ModelSettings } from "../types";
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Settings, Database, PlusCircle, Trash2, RefreshCw, Paperclip } from 'lucide-react';
+import { Message, ModelSettings } from '../types';
 
 interface ChatProps {
   messages: Message[];
@@ -41,17 +32,13 @@ export const Chat: React.FC<ChatProps> = ({
   onResetKnowledgeBase,
   onDeleteKnowledgeBase,
   onUploadAndEmbed,
-}) => {
-  const [input, setInput] = useState("");
-  const [expandedMessageId, setExpandedMessageId] = useState<number | null>(
-    null
-  );
+}) => {const [input, setInput] = useState('');
+  const [expandedMessageId, setExpandedMessageId] = useState<number | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showKnowledgeBaseSettings, setShowKnowledgeBaseSettings] =
-    useState(false);
+  const [showKnowledgeBaseSettings, setShowKnowledgeBaseSettings] = useState(false);
   const [showNewKBForm, setShowNewKBForm] = useState(false);
-  const [newKBName, setNewKBName] = useState("");
-  const [newKBDescription, setNewKBDescription] = useState("");
+  const [newKBName, setNewKBName] = useState('');
+  const [newKBDescription, setNewKBDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -64,7 +51,7 @@ export const Chat: React.FC<ChatProps> = ({
     e.preventDefault();
     if (input.trim()) {
       onSendMessage(input);
-      setInput("");
+      setInput('');
     }
   };
 
@@ -72,8 +59,8 @@ export const Chat: React.FC<ChatProps> = ({
     e.preventDefault();
     if (newKBName.trim()) {
       await onCreateKnowledgeBase(newKBName, newKBDescription);
-      setNewKBName("");
-      setNewKBDescription("");
+      setNewKBName('');
+      setNewKBDescription('');
       setShowNewKBForm(false);
     }
   };
@@ -83,19 +70,18 @@ export const Chat: React.FC<ChatProps> = ({
     if (file) {
       setIsUploading(true);
       try {
-        const needTranslation = window.confirm("是否需要翻譯此文件？");
+        const needTranslation = window.confirm('是否需要翻譯此文件？');
         await onUploadAndEmbed(file, needTranslation);
       } catch (error) {
-        console.error("文件上傳失敗:", error);
+        console.error('文件上傳失敗:', error);
       } finally {
         setIsUploading(false);
         if (fileInputRef.current) {
-          fileInputRef.current.value = "";
+          fileInputRef.current.value = '';
         }
       }
     }
-  };
-  return (
+  };return (
     <div className="flex h-full gap-4">
       {/* 主要聊天區域 */}
       <div className="flex-1 border rounded-lg bg-white flex flex-col">
@@ -122,25 +108,23 @@ export const Chat: React.FC<ChatProps> = ({
             <div
               key={idx}
               className={`max-w-[80%] ${
-                msg.sender === "user" ? "ml-auto" : "mr-auto"
+                msg.sender === 'user' ? 'ml-auto' : 'mr-auto'
               }`}
             >
               <div
                 className={`rounded-lg ${
-                  msg.sender === "user"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100"
+                  msg.sender === 'user'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100'
                 }`}
               >
                 <div className="p-3">{msg.text}</div>
-                {msg.sender === "system" && msg.chunks && (
-                  <div
+                {msg.sender === 'system' && msg.chunks && (
+                  <div 
                     className="px-3 py-1 text-sm text-gray-500 border-t border-gray-200 flex justify-between items-center cursor-pointer hover:bg-gray-50"
-                    onClick={() =>
-                      setExpandedMessageId(
-                        expandedMessageId === idx ? null : idx
-                      )
-                    }
+                    onClick={() => setExpandedMessageId(
+                      expandedMessageId === idx ? null : idx
+                    )}
                   >
                     <span>參考文件</span>
                     {expandedMessageId === idx ? (
@@ -151,20 +135,18 @@ export const Chat: React.FC<ChatProps> = ({
                   </div>
                 )}
               </div>
-              {msg.sender === "system" &&
-                msg.chunks &&
-                expandedMessageId === idx && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded border text-sm">
-                    {msg.chunks.map((chunk, i) => (
-                      <div key={i} className="mb-2">
-                        <div className="font-medium text-gray-700 mb-1">
-                          參考段落 {i + 1}:
-                        </div>
-                        <div className="text-gray-600">{chunk}</div>
+              {msg.sender === 'system' && msg.chunks && expandedMessageId === idx && (
+                <div className="mt-2 p-3 bg-gray-50 rounded border text-sm">
+                  {msg.chunks.map((chunk, i) => (
+                    <div key={i} className="mb-2">
+                      <div className="font-medium text-gray-700 mb-1">
+                        參考段落 {i + 1}:
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <div className="text-gray-600">{chunk}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           <div ref={messagesEndRef} />
@@ -203,8 +185,7 @@ export const Chat: React.FC<ChatProps> = ({
             </button>
           </div>
         </form>
-      </div>
-      {/* 右側邊欄 */}
+      </div>{/* 右側邊欄 */}
       <div className="w-80 space-y-4">
         {/* 知識庫選擇 */}
         <div className="bg-white rounded-lg p-4 shadow-sm">
@@ -219,13 +200,9 @@ export const Chat: React.FC<ChatProps> = ({
                 <PlusCircle className="w-5 h-5" />
               </button>
               <button
-                onClick={() =>
-                  setShowKnowledgeBaseSettings(!showKnowledgeBaseSettings)
-                }
+                onClick={() => setShowKnowledgeBaseSettings(!showKnowledgeBaseSettings)}
                 className={`p-2 rounded-full ${
-                  showKnowledgeBaseSettings
-                    ? "bg-blue-100"
-                    : "hover:bg-gray-100"
+                  showKnowledgeBaseSettings ? 'bg-blue-100' : 'hover:bg-gray-100'
                 }`}
               >
                 <Database className="w-5 h-5" />
@@ -277,15 +254,13 @@ export const Chat: React.FC<ChatProps> = ({
                   key={kb.id}
                   className={`p-2 rounded group relative ${
                     kb.id === currentKnowledgeBase
-                      ? "bg-blue-50 border-blue-200"
-                      : "hover:bg-gray-50"
+                      ? 'bg-blue-50 border-blue-200'
+                      : 'hover:bg-gray-50'
                   }`}
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">
-                        {kb.name}
-                      </div>
+                      <div className="font-medium text-sm truncate">{kb.name}</div>
                       {kb.description && (
                         <div className="text-xs text-gray-500 truncate">
                           {kb.description}
@@ -307,14 +282,10 @@ export const Chat: React.FC<ChatProps> = ({
                       >
                         <RefreshCw className="w-4 h-4" />
                       </button>
-                      {kb.id !== "default" && (
+                      {kb.id !== 'default' && (
                         <button
                           onClick={() => {
-                            if (
-                              window.confirm(
-                                "確定要刪除此知識庫嗎？此操作無法恢復。"
-                              )
-                            ) {
+                            if (window.confirm('確定要刪除此知識庫嗎？此操作無法恢復。')) {
                               onDeleteKnowledgeBase(kb.id);
                             }
                           }}
@@ -330,42 +301,35 @@ export const Chat: React.FC<ChatProps> = ({
               ))}
             </div>
           )}
-        </div>
-        {/* 模型設定 */}
+        </div>{/* 模型設定 */}
         <div className="bg-white rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">模型設定</h3>
             <button
               onClick={() => setShowSettings(!showSettings)}
               className={`p-2 rounded-full ${
-                showSettings ? "bg-blue-100" : "hover:bg-gray-100"
+                showSettings ? 'bg-blue-100' : 'hover:bg-gray-100'
               }`}
             >
               <Settings className="w-5 h-5" />
             </button>
           </div>
-
+          
           {showSettings && (
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium block mb-1">模型</label>
                 <select
                   value={modelSettings.model}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      model: e.target.value,
-                    })
-                  }
+                  onChange={(e) => onSettingsChange({
+                    ...modelSettings,
+                    model: e.target.value
+                  })}
                   className="w-full p-2 text-sm border rounded"
                 >
-                  <option value="llama3.1-ffm-70b-32k-chat">
-                    llama3.1-70B-32k
-                  </option>
+                  <option value="llama3.1-ffm-70b-32k-chat">llama3.1-70B-32k</option>
                   <option value="llama3-ffm-70b-chat">llama3-70B</option>
-                  <option value="ffm-mixtral-8x7b-32k-instruct">
-                    mixtral-8x7B-32k
-                  </option>
+                  <option value="ffm-mixtral-8x7b-32k-instruct">mixtral-8x7B-32k</option>
                 </select>
               </div>
 
@@ -379,39 +343,29 @@ export const Chat: React.FC<ChatProps> = ({
                   max="1"
                   step="0.1"
                   value={modelSettings.temperature}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      temperature: Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => onSettingsChange({
+                    ...modelSettings,
+                    temperature: Number(e.target.value)
+                  })}
                   className="w-full"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  控制回應的創造性 (0: 保守, 1: 創造性)
-                </p>
+                <p className="text-xs text-gray-500 mt-1">控制回應的創造性 (0: 保守, 1: 創造性)</p>
               </div>
 
               <div>
-                <label className="text-sm font-medium block mb-1">
-                  Max Tokens
-                </label>
+                <label className="text-sm font-medium block mb-1">Max Tokens</label>
                 <input
                   type="number"
                   min="100"
                   max="4000"
                   value={modelSettings.maxTokens}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      maxTokens: Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => onSettingsChange({
+                    ...modelSettings,
+                    maxTokens: Number(e.target.value)
+                  })}
                   className="w-full p-2 border rounded"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  控制回應的最大長度 (100-4000)
-                </p>
+                <p className="text-xs text-gray-500 mt-1">控制回應的最大長度 (100-4000)</p>
               </div>
 
               <div>
@@ -424,57 +378,30 @@ export const Chat: React.FC<ChatProps> = ({
                   max="1"
                   step="0.1"
                   value={modelSettings.topP}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      topP: Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => onSettingsChange({
+                    ...modelSettings,
+                    topP: Number(e.target.value)
+                  })}
                   className="w-full"
                 />
                 <p className="text-xs text-gray-500 mt-1">控制回應的多樣性</p>
               </div>
+
               <div>
-                <label className="text-sm font-medium block mb-1">
-                  Top P: {modelSettings.topK_model}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={modelSettings.topK_model}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      topK_model: Number(e.target.value),
-                    })
-                  }
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500 mt-1">控制回應的多樣性</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1">
-                  Frequency Penalty
-                </label>
+                <label className="text-sm font-medium block mb-1">Frequency Penalty</label>
                 <input
                   type="number"
                   min="-2"
                   max="2"
                   step="0.1"
                   value={modelSettings.frequencyPenalty}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      frequencyPenalty: Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => onSettingsChange({
+                    ...modelSettings,
+                    frequencyPenalty: Number(e.target.value)
+                  })}
                   className="w-full p-2 border rounded"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  控制詞彙重複的懲罰程度 (-2 到 2)
-                </p>
+                <p className="text-xs text-gray-500 mt-1">控制詞彙重複的懲罰程度 (-2 到 2)</p>
               </div>
 
               <div>
@@ -483,12 +410,10 @@ export const Chat: React.FC<ChatProps> = ({
                   type="number"
                   min="0"
                   value={modelSettings.seed}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      seed: Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => onSettingsChange({
+                    ...modelSettings,
+                    seed: Number(e.target.value)
+                  })}
                   className="w-full p-2 border rounded"
                 />
                 <p className="text-xs text-gray-500 mt-1">控制隨機性種子</p>
@@ -496,20 +421,18 @@ export const Chat: React.FC<ChatProps> = ({
 
               <div>
                 <label className="text-sm font-medium block mb-1">
-                  Top K: {modelSettings.topK_RAG}
+                  Top K: {modelSettings.topK}
                 </label>
                 <input
                   type="range"
                   min="1"
                   max="10"
                   step="1"
-                  value={modelSettings.topK_RAG}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      topK_RAG: Number(e.target.value),
-                    })
-                  }
+                  value={modelSettings.topK}
+                  onChange={(e) => onSettingsChange({
+                    ...modelSettings,
+                    topK: Number(e.target.value)
+                  })}
                   className="w-full"
                 />
                 <p className="text-xs text-gray-500 mt-1">檢索相關文件的數量</p>
@@ -525,38 +448,29 @@ export const Chat: React.FC<ChatProps> = ({
                   max="1"
                   step="0.05"
                   value={modelSettings.similarityThreshold}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      similarityThreshold: Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => onSettingsChange({
+                    ...modelSettings,
+                    similarityThreshold: Number(e.target.value)
+                  })}
                   className="w-full"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  文件相關性的最低門檻
-                </p>
+                <p className="text-xs text-gray-500 mt-1">文件相關性的最低門檻</p>
               </div>
 
               {/* 當前設定預覽 */}
               <div className="mt-4 p-4 bg-gray-50 rounded">
                 <h4 className="font-medium mb-2">當前設定</h4>
                 <pre className="text-sm text-gray-600 whitespace-pre-wrap">
-                  {JSON.stringify(
-                    {
-                      model: modelSettings.model,
-                      temperature: modelSettings.temperature,
-                      maxTokens: modelSettings.maxTokens,
-                      topP: modelSettings.topP,
-                      frequencyPenalty: modelSettings.frequencyPenalty,
-                      seed: modelSettings.seed,
-                      topK_RAG: modelSettings.topK_RAG,
-                      topK_model: modelSettings.topK_model,
-                      similarityThreshold: modelSettings.similarityThreshold,
-                    },
-                    null,
-                    2
-                  )}
+                  {JSON.stringify({
+                    model: modelSettings.model,
+                    temperature: modelSettings.temperature,
+                    maxTokens: modelSettings.maxTokens,
+                    topP: modelSettings.topP,
+                    frequencyPenalty: modelSettings.frequencyPenalty,
+                    seed: modelSettings.seed,
+                    topK: modelSettings.topK,
+                    similarityThreshold: modelSettings.similarityThreshold
+                  }, null, 2)}
                 </pre>
               </div>
             </div>

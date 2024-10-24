@@ -434,26 +434,7 @@ export const Chat: React.FC<ChatProps> = ({
                 />
                 <p className="text-xs text-gray-500 mt-1">控制回應的多樣性</p>
               </div>
-              <div>
-                <label className="text-sm font-medium block mb-1">
-                  Top P: {modelSettings.topK_model}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={modelSettings.topK_model}
-                  onChange={(e) =>
-                    onSettingsChange({
-                      ...modelSettings,
-                      topK_model: Number(e.target.value),
-                    })
-                  }
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500 mt-1">控制回應的多樣性</p>
-              </div>
+
               <div>
                 <label className="text-sm font-medium block mb-1">
                   Frequency Penalty

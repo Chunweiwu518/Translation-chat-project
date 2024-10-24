@@ -435,24 +435,24 @@ export const Chat: React.FC<ChatProps> = ({
                 <p className="text-xs text-gray-500 mt-1">控制回應的多樣性</p>
               </div>
               <div>
-                <label className="text-sm font-medium block mb-1">
-                  Top P: {modelSettings.topK_model}
-                </label>
+                <label className="text-sm font-medium block mb-1">Top K</label>
                 <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={modelSettings.topK_model}
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={modelSettings.topK}
                   onChange={(e) =>
                     onSettingsChange({
                       ...modelSettings,
-                      topK_model: Number(e.target.value),
+                      topK: Number(e.target.value),
                     })
                   }
-                  className="w-full"
+                  className="w-full p-2 border rounded"
                 />
-                <p className="text-xs text-gray-500 mt-1">控制回應的多樣性</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  檢索相關文件的數量 (1-10)
+                </p>
               </div>
               <div>
                 <label className="text-sm font-medium block mb-1">
@@ -496,18 +496,18 @@ export const Chat: React.FC<ChatProps> = ({
 
               <div>
                 <label className="text-sm font-medium block mb-1">
-                  Top K: {modelSettings.topK_RAG}
+                  Top K: {modelSettings.topK}
                 </label>
                 <input
                   type="range"
                   min="1"
                   max="10"
                   step="1"
-                  value={modelSettings.topK_RAG}
+                  value={modelSettings.topK}
                   onChange={(e) =>
                     onSettingsChange({
                       ...modelSettings,
-                      topK_RAG: Number(e.target.value),
+                      topK: Number(e.target.value),
                     })
                   }
                   className="w-full"
@@ -550,8 +550,7 @@ export const Chat: React.FC<ChatProps> = ({
                       topP: modelSettings.topP,
                       frequencyPenalty: modelSettings.frequencyPenalty,
                       seed: modelSettings.seed,
-                      topK_RAG: modelSettings.topK_RAG,
-                      topK_model: modelSettings.topK_model,
+                      topK: modelSettings.topK,
                       similarityThreshold: modelSettings.similarityThreshold,
                     },
                     null,

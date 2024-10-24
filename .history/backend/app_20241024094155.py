@@ -1,29 +1,14 @@
-import json
-import os
 import shutil
 import time
-import uuid
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import pdfplumber
-from config import Config
-from docx import Document
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.websockets import WebSocket
 from pydantic import BaseModel
 from rag_utils import (
-    add_translated_content_to_vector_store,
-    delete_from_vector_store,
     initialize_rag,
-    initialize_vector_store,
-    query_knowledge_base,
-    reset_vector_store,
-)
-from translation_utils import (
-    one_chunk_translate_text,
-    translate_and_store_to_knowledge_base,
 )
 
 

@@ -1,29 +1,14 @@
-import json
-import os
 import shutil
 import time
-import uuid
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import pdfplumber
-from config import Config
-from docx import Document
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.websockets import WebSocket
 from pydantic import BaseModel
 from rag_utils import (
-    add_translated_content_to_vector_store,
-    delete_from_vector_store,
     initialize_rag,
-    initialize_vector_store,
-    query_knowledge_base,
-    reset_vector_store,
-)
-from translation_utils import (
-    one_chunk_translate_text,
-    translate_and_store_to_knowledge_base,
 )
 
 
@@ -439,91 +424,3 @@ async def delete_file_from_knowledge_base(kb_id: str, file_id: str):
             raise HTTPException(status_code=404, detail="文件不存在")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/query")
-async def query(request: QueryRequest):
-    try:
-        kb_id = request.knowledge_base_id or Config.current_kb_id
-        knowledge_bases = load_knowledge_bases()
-
-        if kb_id not in knowledge_bases:
-            raise HTTPException(status_code=404, detail="知識庫不存在")
-
-        global vector_store
-        current_vector_store = None
-
-        if kb_id != Config.current_kb_id:
-            current_vector_store = initialize_vector_store(
-                knowledge_bases[kb_id]["path"]
-            )
-        else:
-            current_vector_store = vector_store
-
-        try:
-            answer = query_knowledge_base(
-                vector_store=current_vector_store,
-                ffm=ffm,
-                query=request.query,
-                model_settings=request.model_settings,
-            )
-
-            # 獲取相關文件片段
-            top_k = (
-                request.model_settings.get("parameters", {}).get("topK", 3)
-                if request.model_settings
-                else 3
-            )
-            docs = current_vector_store.similarity_search(request.query, k=top_k)
-            chunks = [doc.page_content for doc in docs]
-
-            # 如果使用了臨時向量存儲，清理它
-            if kb_id != Config.current_kb_id and current_vector_store:
-                try:
-                    current_vector_store._client.close()
-                except:
-                    pass
-
-            return {"answer": answer, "relevant_chunks": chunks}
-
-        finally:
-            # 確保在出現錯誤時也能清理臨時向量存儲
-            if kb_id != Config.current_kb_id and current_vector_store:
-                try:
-                    current_vector_store._client.close()
-                except:
-                    pass
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    # 確保必要的目錄存在
-    if not os.path.exists(Config.UPLOAD_FOLDER):
-        os.makedirs(Config.UPLOAD_FOLDER)
-
-    # 確保默認知識庫目錄存在
-    default_kb_path = Path(Config.CHROMA_PATH) / "default"
-    default_kb_path.mkdir(parents=True, exist_ok=True)
-
-    # 初始化知識庫配置文件
-    if not (Path(Config.CHROMA_PATH) / "knowledge_bases.json").exists():
-        save_knowledge_bases(
-            {
-                "default": {
-                    "name": "預設知識庫",
-                    "description": "預設的知識庫",
-                    "path": str(default_kb_path),
-                }
-            }
-        )
-
-    # 創建 translations 目錄（如果需要）
-    translations_path = Path("translations")
-    if not translations_path.exists():
-        translations_path.mkdir(parents=True)
-
-    uvicorn.run(app, host="0.0.0.0", port=5000)
