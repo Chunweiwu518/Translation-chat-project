@@ -1,11 +1,10 @@
-// frontend/src/components/TranslatedFiles.tsx
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { TranslatedFile } from '../types';
+import React, { useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { TranslatedFile } from "../types";
 
 interface TranslatedFilesProps {
   files: TranslatedFile[];
-  onEmbed: (fileId: string) => void;
+  onEmbed: (fileId: string, knowledgeBaseId?: string) => void;
 }
 
 export const TranslatedFiles: React.FC<TranslatedFilesProps> = ({
@@ -20,7 +19,7 @@ export const TranslatedFiles: React.FC<TranslatedFilesProps> = ({
 
   return (
     <div className="mt-6">
-      <h3 className="text-lg font-semibold mb-4">已翻譯文件</h3>
+      <h3 className="text-lg font-semibold mb-4">處理完成的文件</h3>
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
         {files.map((file) => (
           <div
@@ -31,7 +30,7 @@ export const TranslatedFiles: React.FC<TranslatedFilesProps> = ({
               <div>
                 <h4 className="font-medium">{file.name}</h4>
                 <p className="text-sm text-gray-500">
-                  狀態: {file.isEmbedded ? '已加入知識庫' : '未加入知識庫'}
+                  狀態: {file.isEmbedded ? "已加入知識庫" : "未加入知識庫"}
                 </p>
               </div>
               <div className="space-x-2 flex items-center">
@@ -56,7 +55,7 @@ export const TranslatedFiles: React.FC<TranslatedFilesProps> = ({
                 )}
               </div>
             </div>
-            
+
             {!file.isEmbedded && file.embeddingProgress !== undefined && (
               <div className="px-4 pb-2">
                 <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -70,11 +69,13 @@ export const TranslatedFiles: React.FC<TranslatedFilesProps> = ({
                 </p>
               </div>
             )}
-            
+
             {expandedFileId === file.id && (
               <div className="px-4 pb-4">
                 <div className="p-3 bg-gray-50 rounded max-h-[400px] overflow-y-auto">
-                  <pre className="whitespace-pre-wrap font-sans">{file.translatedContent}</pre>
+                  <pre className="whitespace-pre-wrap font-sans">
+                    {file.translatedContent || file.originalContent}
+                  </pre>
                 </div>
               </div>
             )}

@@ -3,5 +3,10 @@
     "name": "預設知識庫",
     "description": "預設的知識庫",
     "path": "chroma_db\\default"
+  },
+  "46ed62d9-1702-407c-ace9-5da8f6f6e9a8": {
+    "name": "小故事",
+    "description": "",
+    "path": "chroma_db\\46ed62d9-1702-407c-ace9-5da8f6f6e9a8"
   }
 }

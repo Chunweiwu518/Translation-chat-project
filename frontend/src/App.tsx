@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { FileUpload } from './components/FileUpload';
-import { Chat } from './components/Chat';
-import { TranslatedFiles } from './components/TranslatedFiles';
-import { BatchFileProcessor } from './components/BatchFileProcessor';
-import { Message, TranslatedFile, ModelSettings } from './types';
+import React, { useState, useEffect } from "react";
+import { Sidebar } from "./components/Sidebar";
+import { FileUpload } from "./components/FileUpload";
+import { Chat } from "./components/Chat";
+import { TranslatedFiles } from "./components/TranslatedFiles";
+import { BatchFileProcessor } from "./components/BatchFileProcessor";
+import {
+  FileWithOptions,
+  Message,
+  TranslatedFile,
+  ModelSettings,
+  ChatSession,
+} from "./types";
 
 interface KnowledgeBaseInfo {
   id: string;
@@ -12,252 +18,185 @@ interface KnowledgeBaseInfo {
   description: string;
 }
 
-interface ChatHistory {
-  id: string;
-  title: string;
-  messages: Message[];
-  date: Date;
-}
-
 const App: React.FC = () => {
   // 基本狀態
-  const [currentMode, setCurrentMode] = useState('translate');
+  const [currentMode, setCurrentMode] = useState("translate");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
+  const [uploadProgress, setUploadProgress] = useState<{
+    [key: string]: number;
+  }>({});
   const [translatedFiles, setTranslatedFiles] = useState<TranslatedFile[]>([]);
-  const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
-  
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<string | null>(null);
+
   // 知識庫狀態
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseInfo[]>([
-    { id: 'default', name: '預設知識庫', description: '預設的知識庫' }
+    { id: "default", name: "預設知識庫", description: "預設的知識庫" },
   ]);
-  const [currentKnowledgeBase, setCurrentKnowledgeBase] = useState('default');
-  
+  const [currentKnowledgeBase, setCurrentKnowledgeBase] = useState("default");
+
   // 模型設定
   const [modelSettings, setModelSettings] = useState<ModelSettings>({
-    model: 'llama3.1-ffm-70b-32k-chat',
+    model: "llama3.1-ffm-70b-32k-chat",
     temperature: 0.7,
     maxTokens: 2000,
     topP: 0.9,
     frequencyPenalty: 0.0,
     seed: 42,
     topK: 3,
-    similarityThreshold: 0.7
+    similarityThreshold: 0.7,
   });
 
-  // 載入知識庫列表
   useEffect(() => {
     fetchKnowledgeBases();
   }, []);
 
   const fetchKnowledgeBases = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/knowledge_bases');
+      const response = await fetch("http://localhost:5000/api/knowledge_bases");
       if (response.ok) {
         const data = await response.json();
         setKnowledgeBases(data);
       }
     } catch (error) {
-      console.error('獲取知識庫列表失敗:', error);
+      console.error("獲取知識庫列表失敗:", error);
     }
   };
 
-  const handleFileUpload = async (files: File[]) => {
-    setUploadProgress(
-      files.reduce((acc, file) => ({
-        ...acc,
-        [file.name]: 0
-      }), {})
-    );
-  
-    await Promise.all(
-      files.map(async file => {
+  const handleFileUpload = async (files: FileWithOptions[]) => {
+    for (const file of files) {
+      setUploadProgress((prev) => ({
+        ...prev,
+        [file.name]: 0,
+      }));
+
+      try {
         const formData = new FormData();
-        formData.append('file', file);
-        formData.append('knowledge_base_id', currentKnowledgeBase);
-  
-        try {
-          const updateProgress = (progress: number) => {
-            setUploadProgress(prev => ({
-              ...prev,
-              [file.name]: progress
-            }));
+        formData.append("file", file.file);
+
+        // 根據是否需要翻譯選擇不同的端點
+        const endpoint = file.needTranslation
+          ? "http://localhost:5000/api/upload_and_translate"
+          : "http://localhost:5000/api/upload";
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const newFile: TranslatedFile = {
+            id: file.id,
+            name: file.name,
+            translatedContent: file.needTranslation
+              ? data.translated_content
+              : data.content,
+            originalContent: !file.needTranslation ? data.content : undefined,
+            isEmbedded: false,
           };
-  
-          updateProgress(10);
-  
-          const response = await fetch('http://localhost:5000/api/upload_and_translate', {
-            method: 'POST',
-            body: formData
-          });
-          
-          if (response.ok) {
-            updateProgress(100);
-            
-            const data = await response.json();
-            const newFile: TranslatedFile = {
-              id: Date.now().toString() + file.name,
-              name: file.name,
-              translatedContent: data.translated_content,
-              isEmbedded: false,
-              knowledgeBaseId: currentKnowledgeBase
-            };
-            
-            setTranslatedFiles(prev => [...prev, newFile]);
-  
-            setTimeout(() => {
-              setUploadProgress(prev => {
-                const newProgress = { ...prev };
-                delete newProgress[file.name];
-                return newProgress;
-              });
-            }, 1000);
-          }
-        } catch (error) {
-          console.error(`上傳錯誤 (${file.name}):`, error);
-          setUploadProgress(prev => {
+
+          setTranslatedFiles((prev) => [...prev, newFile]);
+          setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }));
+        }
+      } catch (error) {
+        console.error(`處理文件錯誤 (${file.name}):`, error);
+      } finally {
+        setTimeout(() => {
+          setUploadProgress((prev) => {
             const newProgress = { ...prev };
             delete newProgress[file.name];
             return newProgress;
           });
-        }
-      })
-    );
+        }, 1000);
+      }
+    }
   };
 
-  const handleBatchEmbed = async (fileIds: string[], targetKnowledgeBaseId: string) => {
+  const handleBatchEmbed = async (
+    fileIds: string[],
+    targetKnowledgeBaseId: string
+  ) => {
     for (const fileId of fileIds) {
-      const file = translatedFiles.find(f => f.id === fileId);
+      const file = translatedFiles.find((f) => f.id === fileId);
       if (!file) continue;
 
       try {
-        setTranslatedFiles(prev =>
-          prev.map(f => f.id === fileId ? { ...f, embeddingProgress: 0 } : f)
+        setTranslatedFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId ? { ...f, embeddingProgress: 0 } : f
+          )
         );
 
-        const response = await fetch('http://localhost:5000/api/embed', {
-          method: 'POST',
+        const response = await fetch("http://localhost:5000/api/embed", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            content: file.translatedContent,
+            content: file.translatedContent || file.originalContent,
             filename: file.name,
-            knowledge_base_id: targetKnowledgeBaseId
-          })
+            knowledge_base_id: targetKnowledgeBaseId,
+          }),
         });
 
         if (response.ok) {
           for (let progress = 0; progress <= 100; progress += 10) {
-            setTranslatedFiles(prev =>
-              prev.map(f => f.id === fileId ? { ...f, embeddingProgress: progress } : f)
+            setTranslatedFiles((prev) =>
+              prev.map((f) =>
+                f.id === fileId ? { ...f, embeddingProgress: progress } : f
+              )
             );
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise((resolve) => setTimeout(resolve, 100));
           }
 
-          setTranslatedFiles(prev =>
-            prev.map(f => f.id === fileId ? 
-              { ...f, isEmbedded: true, knowledgeBaseId: targetKnowledgeBaseId } : f
+          setTranslatedFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileId
+                ? {
+                    ...f,
+                    isEmbedded: true,
+                    knowledgeBaseId: targetKnowledgeBaseId,
+                  }
+                : f
             )
           );
         }
       } catch (error) {
-        console.error('Embedding 錯誤:', error);
-        setTranslatedFiles(prev =>
-          prev.map(f => f.id === fileId ? { ...f, embeddingProgress: undefined } : f)
-        );
+        console.error("Embedding 錯誤:", error);
       }
     }
   };
 
-  const handleEmbed = async (fileId: string) => {
-    const file = translatedFiles.find(f => f.id === fileId);
-    if (!file) return;
-
-    try {
-      setTranslatedFiles(prev =>
-        prev.map(f => f.id === fileId ? { ...f, embeddingProgress: 0 } : f)
-      );
-
-      const response = await fetch('http://localhost:5000/api/embed', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          content: file.translatedContent,
-          filename: file.name,
-          knowledge_base_id: currentKnowledgeBase
-        })
-      });
-
-      if (response.ok) {
-        for (let progress = 0; progress <= 100; progress += 10) {
-          setTranslatedFiles(prev =>
-            prev.map(f => f.id === fileId ? { ...f, embeddingProgress: progress } : f)
-          );
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-
-        setTranslatedFiles(prev =>
-          prev.map(f => f.id === fileId ? { ...f, isEmbedded: true } : f)
-        );
-      }
-    } catch (error) {
-      console.error('Embedding 錯誤:', error);
-      setTranslatedFiles(prev =>
-        prev.map(f => f.id === fileId ? { ...f, embeddingProgress: undefined } : f)
-      );
-    }
-  };
-
-  const handleSwitchKnowledgeBase = async (id: string) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/knowledge_base/switch/${id}`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        setCurrentKnowledgeBase(id);
-        setMessages([]);  // 切換知識庫時清空對話
-      }
-    } catch (error) {
-      console.error('切換知識庫錯誤:', error);
-    }
-  };
-
-  const handleResetKnowledgeBase = async (id: string) => {
-    if (window.confirm('確定要重置此知識庫嗎？此操作無法恢復。')) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/knowledge_base/reset/${id}`, {
-          method: 'POST'
-        });
-
-        if (response.ok) {
-          setTranslatedFiles(prev => 
-            prev.filter(f => f.knowledgeBaseId !== id)
-          );
-          if (id === currentKnowledgeBase) {
-            setMessages([]);  // 如果重置當前知識庫，清空對話
-          }
-        }
-      } catch (error) {
-        console.error('重置知識庫錯誤:', error);
-      }
-    }
+  const createNewChatSession = () => {
+    const newSession: ChatSession = {
+      id: Date.now().toString(),
+      title: "新對話",
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      knowledgeBaseId: currentKnowledgeBase,
+    };
+    setChatSessions((prev) => [newSession, ...prev]);
+    setCurrentSession(newSession.id);
+    setMessages([]);
   };
 
   const handleSendMessage = async (text: string) => {
-    const userMessage = { sender: 'user' as const, text };
-    setMessages(prev => [...prev, userMessage]);
-    
+    if (!currentSession) {
+      createNewChatSession();
+    }
+
+    const userMessage = { sender: "user" as const, text };
+    setMessages((prev) => [...prev, userMessage]);
+
     try {
-      const response = await fetch('http://localhost:5000/api/query', {
-        method: 'POST',
+      const response = await fetch("http://localhost:5000/api/query", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           query: text,
           knowledge_base_id: currentKnowledgeBase,
           model_settings: {
@@ -269,83 +208,77 @@ const App: React.FC = () => {
               frequency_penalty: modelSettings.frequencyPenalty,
               seed: modelSettings.seed,
               topK: modelSettings.topK,
-              similarityThreshold: modelSettings.similarityThreshold
-            }
-          }
-        })
+              similarityThreshold: modelSettings.similarityThreshold,
+            },
+          },
+        }),
       });
 
       if (response.ok) {
         const data = await response.json();
         const systemMessage = {
-          sender: 'system' as const,
+          sender: "system" as const,
           text: data.answer,
-          chunks: data.relevant_chunks
+          chunks: data.relevant_chunks,
         };
-        setMessages(prev => [...prev, systemMessage]);
 
-        // 保存到歷史記錄
-        const newHistory: ChatHistory = {
-          id: Date.now().toString(),
-          title: text.slice(0, 50) + (text.length > 50 ? '...' : ''),
-          messages: [...messages, userMessage, systemMessage],
-          date: new Date(),
-        };
-        setChatHistory(prev => [newHistory, ...prev]);
-      }
-    } catch (error) {
-      console.error('查詢錯誤:', error);
-      setMessages(prev => [...prev, {
-        sender: 'system',
-        text: '抱歉，處理您的問題時出現錯誤。請稍後重試。'
-      }]);
-    }
-  };
+        setMessages((prev) => [...prev, systemMessage]);
 
-  const handleLoadHistory = (historyId: string) => {
-    const history = chatHistory.find(h => h.id === historyId);
-    if (history) {
-      setMessages(history.messages);
-    }
-  };
-
-  const handleDeleteHistory = (historyId: string) => {
-    setChatHistory(prev => prev.filter(h => h.id !== historyId));
-  };
-
-  const handleDeleteFile = async (fileId: string) => {
-    try {
-      const response = await fetch(
-        `http://localhost:5000/api/knowledge_base/${currentKnowledgeBase}/file/${fileId}`,
-        { method: 'DELETE' }
-      );
-
-      if (response.ok) {
-        setTranslatedFiles(prev => 
-          prev.filter(file => file.id !== fileId)
+        // 更新當前會話
+        setChatSessions((prev) =>
+          prev.map((session) =>
+            session.id === currentSession
+              ? {
+                  ...session,
+                  messages: [...session.messages, userMessage, systemMessage],
+                  updatedAt: new Date(),
+                }
+              : session
+          )
         );
       }
     } catch (error) {
-      console.error('刪除文件錯誤:', error);
+      console.error("查詢錯誤:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "system",
+          text: "抱歉，處理您的問題時出現錯誤。請稍後重試。",
+        },
+      ]);
     }
   };
 
-  const handleClearChat = () => {
-    setMessages([]);
+  const handleLoadSession = (sessionId: string) => {
+    const session = chatSessions.find((s) => s.id === sessionId);
+    if (session) {
+      setCurrentSession(sessionId);
+      setMessages(session.messages);
+      setCurrentKnowledgeBase(session.knowledgeBaseId);
+    }
+  };
+
+  const handleDeleteSession = (sessionId: string) => {
+    setChatSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if (currentSession === sessionId) {
+      setCurrentSession(null);
+      setMessages([]);
+    }
   };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar 
-        onModeChange={setCurrentMode} 
+      <Sidebar
+        onModeChange={setCurrentMode}
         currentMode={currentMode}
-        chatHistory={chatHistory}
-        onLoadHistory={handleLoadHistory}
-        onDeleteHistory={handleDeleteHistory}
+        chatSessions={chatSessions}
+        onLoadSession={handleLoadSession}
+        onDeleteSession={handleDeleteSession}
+        onCreateSession={createNewChatSession}
       />
-      
+
       <div className="flex-1 ml-64 p-6">
-        {currentMode === 'translate' && (
+        {currentMode === "translate" && (
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl font-bold mb-4">上傳檔案</h2>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -357,7 +290,9 @@ const App: React.FC = () => {
                 {translatedFiles.length > 0 && (
                   <TranslatedFiles
                     files={translatedFiles}
-                    onEmbed={handleEmbed}
+                    onEmbed={(fileId) =>
+                      handleBatchEmbed([fileId], currentKnowledgeBase)
+                    }
                   />
                 )}
               </div>
@@ -371,22 +306,40 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        
-        {currentMode === 'chat' && (
+
+        {currentMode === "chat" && (
           <div className="h-full">
             <Chat
               messages={messages}
               onSendMessage={handleSendMessage}
-              onClearChat={handleClearChat}
-              currentKnowledgeBaseName={knowledgeBases.find(kb => kb.id === currentKnowledgeBase)?.name || ''}
+              currentKnowledgeBaseName={
+                knowledgeBases.find((kb) => kb.id === currentKnowledgeBase)
+                  ?.name || ""
+              }
               modelSettings={modelSettings}
               onSettingsChange={setModelSettings}
-              translatedFiles={translatedFiles}
-              onDeleteFile={handleDeleteFile}
               knowledgeBases={knowledgeBases}
               currentKnowledgeBase={currentKnowledgeBase}
-              onSwitchKnowledgeBase={handleSwitchKnowledgeBase}
-              onResetKnowledgeBase={handleResetKnowledgeBase}
+              onSwitchKnowledgeBase={setCurrentKnowledgeBase}
+              onCreateKnowledgeBase={async (name, description) => {
+                try {
+                  const response = await fetch(
+                    "http://localhost:5000/api/knowledge_base",
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({ name, description }),
+                    }
+                  );
+                  if (response.ok) {
+                    fetchKnowledgeBases();
+                  }
+                } catch (error) {
+                  console.error("創建知識庫失敗:", error);
+                }
+              }}
             />
           </div>
         )}

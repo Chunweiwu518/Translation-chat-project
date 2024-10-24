@@ -48,6 +48,17 @@ export const FileProcessor: React.FC<FileProcessorProps> = ({
   const completedFiles = files.filter((f) => f.status === "completed");
   const errorFiles = files.filter((f) => f.status === "error");
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "translating":
+        return "翻譯中";
+      case "embedding":
+        return "Embedding中";
+      default:
+        return "處理中";
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* 知識庫選擇 */}
@@ -77,7 +88,7 @@ export const FileProcessor: React.FC<FileProcessorProps> = ({
                 className="flex items-center justify-between p-2 bg-gray-50 rounded"
               >
                 <div className="flex items-center flex-1 min-w-0 mr-4">
-                  <span className="text-sm truncate flex-1">{file.name}</span>
+                  <span className="text-sm truncate">{file.name}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
@@ -119,7 +130,7 @@ export const FileProcessor: React.FC<FileProcessorProps> = ({
                 <div className="flex justify-between mb-1">
                   <span className="text-sm">{file.name}</span>
                   <span className="text-xs text-blue-500">
-                    {file.status === "translating" ? "翻譯中" : "Embedding中"}
+                    {getStatusText(file.status)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
