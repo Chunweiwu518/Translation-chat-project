@@ -4,7 +4,7 @@ import { FileUpload } from "./components/FileUpload";
 import { Chat } from "./components/Chat";
 import { TranslatedFiles } from "./components/TranslatedFiles";
 import { BatchFileProcessor } from "./components/BatchFileProcessor";
-import { WelcomeChatScreen } from "./components/WelcomeChatScreen"; // 新增此組件
+import { WelcomeChatScreen } from "./components/WelcomeChatScreen";
 import { useChat } from "./hooks/useChat";
 import { useFileProcessing } from "./hooks/useFileProcessing";
 import { useKnowledgeBase } from "./hooks/useKnowledgeBase";
@@ -50,7 +50,7 @@ const ChatMode: React.FC<ChatModeProps> = ({
   if (!chat.currentSession) {
     return (
       <WelcomeChatScreen 
-        onCreateNewChat={() => chat.createNewChatSession(knowledgeBase.currentKnowledgeBase)}
+        onCreateNewChat={(title) => chat.createNewChatSession(knowledgeBase.currentKnowledgeBase, title)}
       />
     );
   }
@@ -79,6 +79,8 @@ const ChatMode: React.FC<ChatModeProps> = ({
         onCreateKnowledgeBase={knowledgeBase.createKnowledgeBase}
         onResetKnowledgeBase={knowledgeBase.resetKnowledgeBase}
         onDeleteKnowledgeBase={knowledgeBase.deleteKnowledgeBase}
+        currentSession={chat.chatSessions.find(s => s.id === chat.currentSession)}
+        onUpdateSessionTitle={chat.updateSessionTitle}
         onUploadAndEmbed={async (file: File, needTranslation: boolean) => {
           const formData = new FormData();
           formData.append("file", file);
@@ -151,12 +153,18 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-gray-50">
       <Sidebar
         currentMode={currentMode}
-        onModeChange={setCurrentMode}
+        onModeChange={(mode) => {
+          setCurrentMode(mode);
+          if (mode === "chat" && !chat.currentSession) {
+            chat.setCurrentSession(null);
+          }
+        }}
         chatSessions={chat.chatSessions}
         onLoadSession={chat.handleLoadSession}
         onDeleteSession={chat.handleDeleteSession}
-        onCreateSession={() => 
-          chat.createNewChatSession(knowledgeBase.currentKnowledgeBase)}
+        onCreateSession={(title) => 
+          chat.createNewChatSession(knowledgeBase.currentKnowledgeBase, title)}
+        onUpdateSessionTitle={chat.updateSessionTitle}
       />
 
       <div className="flex-1 ml-64 p-6">
