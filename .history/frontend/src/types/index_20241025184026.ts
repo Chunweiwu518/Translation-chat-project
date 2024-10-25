@@ -62,7 +62,7 @@ export interface ChatHook {
   messages: Message[];
   chatSessions: ChatSession[];
   currentSession: string | null;
-  setMessages: (newMessages: Message[] | ((prev: Message[]) => Message[])) => void;
+  setMessages: (messages: Message[]) => void;
   setCurrentSession: (sessionId: string | null) => void;
   createNewChatSession: (knowledgeBaseId: string) => void;
   handleSendMessage: (text: string, knowledgeBaseId: string, modelSettings: ModelSettings) => Promise<void>;
@@ -96,20 +96,4 @@ export interface ChatModeProps {
   knowledgeBase: KnowledgeBaseHook;
   modelSettings: ModelSettings;
   onSettingsChange: (settings: ModelSettings) => void;
-}
-
-export interface ChatProps {
-  messages: Message[];
-  onSendMessage: (text: string) => void;
-  onClearChat: () => void;
-  currentKnowledgeBaseName: string;
-  modelSettings: ModelSettings;
-  onSettingsChange: (settings: ModelSettings) => void;
-  knowledgeBases: KnowledgeBase[];
-  currentKnowledgeBase: string;
-  onSwitchKnowledgeBase: (id: string) => void;
-  onCreateKnowledgeBase: (name: string, description: string) => void;
-  onResetKnowledgeBase: (id: string) => void;
-  onDeleteKnowledgeBase: (id: string) => void;
-  onUploadAndEmbed: (file: File, needTranslation: boolean) => Promise<void>;
 }

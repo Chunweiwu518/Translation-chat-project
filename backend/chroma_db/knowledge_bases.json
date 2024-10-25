@@ -3,10 +3,5 @@
     "name": "預設知識庫",
     "description": "預設的知識庫",
     "path": "chroma_db\\default"
-  },
-  "2043cd1e-ae55-4674-83d3-82055fbb0cc4": {
-    "name": "遠銀知識庫",
-    "description": "",
-    "path": "chroma_db\\2043cd1e-ae55-4674-83d3-82055fbb0cc4"
   }
 }

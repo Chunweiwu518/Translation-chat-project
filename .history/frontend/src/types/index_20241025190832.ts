@@ -113,3 +113,16 @@ export interface ChatProps {
   onDeleteKnowledgeBase: (id: string) => void;
   onUploadAndEmbed: (file: File, needTranslation: boolean) => Promise<void>;
 }
+
+export interface ChatHook {
+  messages: Message[];
+  chatSessions: ChatSession[];
+  currentSession: string | null;
+  setMessages: (newMessages: Message[] | ((prev: Message[]) => Message[])) => void;
+  setCurrentSession: (sessionId: string | null) => void;
+  createNewChatSession: (knowledgeBaseId: string, title?: string) => void; // 新增 title 參數
+  handleSendMessage: (text: string, knowledgeBaseId: string, modelSettings: ModelSettings) => Promise<void>;
+  handleLoadSession: (sessionId: string) => void;
+  handleDeleteSession: (sessionId: string) => void;
+  updateSessionTitle: (sessionId: string, newTitle: string) => void; // 新增此方法
+}

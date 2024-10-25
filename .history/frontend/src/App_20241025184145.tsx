@@ -4,7 +4,6 @@ import { FileUpload } from "./components/FileUpload";
 import { Chat } from "./components/Chat";
 import { TranslatedFiles } from "./components/TranslatedFiles";
 import { BatchFileProcessor } from "./components/BatchFileProcessor";
-import { WelcomeChatScreen } from "./components/WelcomeChatScreen"; // 新增此組件
 import { useChat } from "./hooks/useChat";
 import { useFileProcessing } from "./hooks/useFileProcessing";
 import { useKnowledgeBase } from "./hooks/useKnowledgeBase";
@@ -46,88 +45,78 @@ const ChatMode: React.FC<ChatModeProps> = ({
   knowledgeBase,
   modelSettings,
   onSettingsChange,
-}) => {
-  if (!chat.currentSession) {
-    return (
-      <WelcomeChatScreen 
-        onCreateNewChat={() => chat.createNewChatSession(knowledgeBase.currentKnowledgeBase)}
-      />
-    );
-  }
-
-  return (
-    <div className="h-full">
-      <Chat
-        messages={chat.messages}
-        onSendMessage={(text) => 
-          chat.handleSendMessage(
-            text, 
-            knowledgeBase.currentKnowledgeBase, 
-            modelSettings
-          )}
-        onClearChat={() => chat.setMessages([])}
-        currentKnowledgeBaseName={
-          knowledgeBase.knowledgeBases.find(
-            (kb) => kb.id === knowledgeBase.currentKnowledgeBase
-          )?.name || ""
-        }
-        modelSettings={modelSettings}
-        onSettingsChange={onSettingsChange}
-        knowledgeBases={knowledgeBase.knowledgeBases}
-        currentKnowledgeBase={knowledgeBase.currentKnowledgeBase}
-        onSwitchKnowledgeBase={knowledgeBase.setCurrentKnowledgeBase}
-        onCreateKnowledgeBase={knowledgeBase.createKnowledgeBase}
-        onResetKnowledgeBase={knowledgeBase.resetKnowledgeBase}
-        onDeleteKnowledgeBase={knowledgeBase.deleteKnowledgeBase}
-        onUploadAndEmbed={async (file: File, needTranslation: boolean) => {
-          const formData = new FormData();
-          formData.append("file", file);
-    
-          try {
-            const uploadEndpoint = needTranslation
-              ? "http://localhost:5000/api/upload_and_translate"
-              : "http://localhost:5000/api/upload";
-    
-            const uploadResponse = await fetch(uploadEndpoint, {
+}) => (
+  <div className="h-full">
+    <Chat
+      messages={chat.messages}
+      onSendMessage={(text) => 
+        chat.handleSendMessage(
+          text, 
+          knowledgeBase.currentKnowledgeBase, 
+          modelSettings
+        )}
+      onClearChat={() => chat.setMessages([])}
+      currentKnowledgeBaseName={
+        knowledgeBase.knowledgeBases.find(
+          (kb) => kb.id === knowledgeBase.currentKnowledgeBase
+        )?.name || ""
+      }
+      modelSettings={modelSettings}
+      onSettingsChange={onSettingsChange}
+      knowledgeBases={knowledgeBase.knowledgeBases}
+      currentKnowledgeBase={knowledgeBase.currentKnowledgeBase}
+      onSwitchKnowledgeBase={knowledgeBase.setCurrentKnowledgeBase}
+      onCreateKnowledgeBase={knowledgeBase.createKnowledgeBase}
+      onResetKnowledgeBase={knowledgeBase.resetKnowledgeBase}
+      onDeleteKnowledgeBase={knowledgeBase.deleteKnowledgeBase}
+      onUploadAndEmbed={async (file: File, needTranslation: boolean) => {
+        const formData = new FormData();
+        formData.append("file", file);
+  
+        try {
+          const uploadEndpoint = needTranslation
+            ? "http://localhost:5000/api/upload_and_translate"
+            : "http://localhost:5000/api/upload";
+  
+          const uploadResponse = await fetch(uploadEndpoint, {
+            method: "POST",
+            body: formData,
+          });
+  
+          if (uploadResponse.ok) {
+            const data = await uploadResponse.json();
+            const content = needTranslation ? data.translated_content : data.content;
+  
+            const embedResponse = await fetch("http://localhost:5000/api/embed", {
               method: "POST",
-              body: formData,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                content: content,
+                filename: file.name,
+                knowledge_base_id: knowledgeBase.currentKnowledgeBase,
+              }),
             });
-    
-            if (uploadResponse.ok) {
-              const data = await uploadResponse.json();
-              const content = needTranslation ? data.translated_content : data.content;
-    
-              const embedResponse = await fetch("http://localhost:5000/api/embed", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  content: content,
-                  filename: file.name,
-                  knowledge_base_id: knowledgeBase.currentKnowledgeBase,
-                }),
-              });
-    
-              if (embedResponse.ok) {
-                const successMessage: Message = {
-                  sender: "system",
-                  text: `文件 "${file.name}" 已成功添加到知識庫中。`,
-                };
-                chat.setMessages((prev: Message[]) => [...prev, successMessage]);
-              }
+  
+            if (embedResponse.ok) {
+              const successMessage: Message = {
+                sender: "system",
+                text: `文件 "${file.name}" 已成功添加到知識庫中。`,
+              };
+              chat.setMessages((prev: Message[]) => [...prev, successMessage]);
             }
-          } catch (error) {
-            console.error("處理文件時出錯:", error);
-            const errorMessage: Message = {
-              sender: "system",
-              text: `處理文件 "${file.name}" 時出錯。請稍後重試。`,
-            };
-            chat.setMessages((prev: Message[]) => [...prev, errorMessage]);
           }
-        }}
-      />
-    </div>
-  );
-};
+        } catch (error) {
+          console.error("處理文件時出錯:", error);
+          const errorMessage: Message = {
+            sender: "system",
+            text: `處理文件 "${file.name}" 時出錯。請稍後重試。`,
+          };
+          chat.setMessages((prev: Message[]) => [...prev, errorMessage]);
+        }
+      }}
+    />
+  </div>
+);
 
 const App: React.FC = () => {
   const [currentMode, setCurrentMode] = useState("translate");
