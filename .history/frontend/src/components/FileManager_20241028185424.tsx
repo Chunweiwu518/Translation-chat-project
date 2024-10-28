@@ -221,7 +221,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     }
   };
 
-  // 修改處理批次操作的函數
+  // 理批次操作
   const handleBatchAction = async (action: 'translate' | 'direct') => {
     if (!selectedKnowledgeBase || selectedFiles.length === 0) return;
 
@@ -230,27 +230,40 @@ export const FileManager: React.FC<FileManagerProps> = ({
     
     try {
       if (action === 'translate') {
-        await onBatchTranslateAndEmbed(
-          selectedFiles, 
-          selectedKnowledgeBase,
-          setProgress
-        );
+        setProgress(25);
+        await onBatchTranslateAndEmbed(selectedFiles, selectedKnowledgeBase, (progress) => setProgress(progress));
+        setProgress(100);
+        setNotification({
+          show: true,
+          message: '翻譯完成！請在翻譯界面查看結果',
+          type: 'success'
+        });
       } else {
-        await onBatchEmbed(
-          selectedFiles, 
-          selectedKnowledgeBase,
-          setProgress
-        );
+        setProgress(25);
+        await onBatchEmbed(selectedFiles, selectedKnowledgeBase, (progress) => setProgress(progress));
+        setProgress(100);
+        setNotification({
+          show: true,
+          message: '已成功加知識庫',
+          type: 'success'
+        });
       }
       setSelectedFiles([]);
       setShowActionModal(false);
-      showNotification('處理完成！', 'success');
     } catch (error) {
       console.error('批次處理失敗:', error);
-      showNotification('處理失敗，請稍後重試', 'error');
+      setNotification({
+        show: true,
+        message: '處理失敗，請稍後重試',
+        type: 'error'
+      });
     } finally {
       setProcessing(false);
       setProgress(0);
+      // 3後自動關閉通知
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
     }
   };
 
@@ -652,7 +665,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
                 className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200"
                 disabled={processing}
               >
-                ��消
+                取消
               </button>
               <button
                 onClick={() => handleBatchAction(currentAction)}

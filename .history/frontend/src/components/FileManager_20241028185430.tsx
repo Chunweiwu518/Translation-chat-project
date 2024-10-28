@@ -652,7 +652,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
                 className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200"
                 disabled={processing}
               >
-                ��消
+                取消
               </button>
               <button
                 onClick={() => handleBatchAction(currentAction)}

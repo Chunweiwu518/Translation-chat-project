@@ -1,28 +1,10 @@
 // src/hooks/useFileProcessing.ts
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FileWithOptions, TranslatedFile, FileProcessingHook } from '../types';
 
 export function useFileProcessing(): FileProcessingHook {
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
   const [translatedFiles, setTranslatedFiles] = useState<TranslatedFile[]>([]);
-
-  // 添加初始化函數
-  const fetchTranslatedFiles = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/translated_files');
-      if (response.ok) {
-        const data = await response.json();
-        setTranslatedFiles(data);
-      }
-    } catch (error) {
-      console.error('獲取翻譯文件失敗:', error);
-    }
-  };
-
-  // 在組件掛載時獲取已有的翻譯文件
-  useEffect(() => {
-    fetchTranslatedFiles();
-  }, []);
 
   const handleFileUpload = async (files: FileWithOptions[]) => {
     for (const file of files) {
@@ -49,40 +31,25 @@ export function useFileProcessing(): FileProcessingHook {
               ? data.translated_content 
               : data.content,
             originalContent: data.content,
-            status: 'completed',
+            status: 'completed', // 添加 status 屬性
             isEmbedded: false,
             embeddingProgress: 0
           };
-
-          // 保存翻譯文件到後端
-          await fetch('http://localhost:5000/api/translated_files', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newFile)
-          });
 
           setTranslatedFiles(prev => [...prev, newFile]);
         }
       } catch (error) {
         console.error('處理檔案失敗:', error);
-        const failedFile: TranslatedFile = {
+        // 添加錯誤狀態的文件
+        setTranslatedFiles(prev => [...prev, {
           id: file.id,
           name: file.name,
           originalContent: '',
           translatedContent: '',
-          status: 'failed',
+          status: 'failed', // 失敗狀態
           isEmbedded: false,
           embeddingProgress: 0
-        };
-
-        // 保存失敗記錄到後端
-        await fetch('http://localhost:5000/api/translated_files', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(failedFile)
-        });
-
-        setTranslatedFiles(prev => [...prev, failedFile]);
+        }]);
       }
     }
   };
@@ -136,27 +103,11 @@ export function useFileProcessing(): FileProcessingHook {
     }
   };
 
-  // 修改刪除函數
-  const handleDelete = async (fileId: string) => {
-    try {
-      // 從後端刪除文件
-      await fetch(`http://localhost:5000/api/translated_files/${fileId}`, {
-        method: 'DELETE'
-      });
-      
-      // 更新前端狀態
-      setTranslatedFiles(prev => prev.filter(file => file.id !== fileId));
-    } catch (error) {
-      console.error('刪除翻譯文件失敗:', error);
-    }
-  };
-
   return {
     uploadProgress,
     translatedFiles,
     handleFileUpload,
     handleBatchEmbed,
-    setTranslatedFiles,
-    handleDelete  // 導出刪除函數
+    setTranslatedFiles
   };
 }

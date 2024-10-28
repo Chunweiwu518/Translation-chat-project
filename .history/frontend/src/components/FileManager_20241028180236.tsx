@@ -25,16 +25,8 @@ interface FileInfo {
 
 interface FileManagerProps {
   knowledgeBases: Array<{ id: string; name: string }>;
-  onBatchTranslateAndEmbed: (
-    files: string[], 
-    knowledgeBaseId: string, 
-    onProgress: (progress: number) => void
-  ) => Promise<void>;
-  onBatchEmbed: (
-    files: string[], 
-    knowledgeBaseId: string,
-    onProgress: (progress: number) => void
-  ) => Promise<void>;
+  onBatchTranslateAndEmbed: (files: string[], knowledgeBaseId: string) => Promise<void>;
+  onBatchEmbed: (files: string[], knowledgeBaseId: string) => Promise<void>;
   onModeChange: (mode: 'chat' | 'file') => void;
   onFileChat: (files: string[]) => void;
 }
@@ -97,13 +89,13 @@ export const FileManager: React.FC<FileManagerProps> = ({
   // 創建新料夾
   const handleCreateFolder = async () => {
     if (!newFolderName) return;
-    
+
     try {
       const response = await fetch('http://localhost:5000/api/files/create_folder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          path: currentPath === '/' ? newFolderName : `${currentPath}/${newFolderName}`
+          path: `${currentPath}${newFolderName}`
         })
       });
 
@@ -111,51 +103,36 @@ export const FileManager: React.FC<FileManagerProps> = ({
         fetchFiles();
         setShowNewFolderModal(false);
         setNewFolderName('');
-        setNotification({
-          show: true,
-          message: '資料夾創建成功',
-          type: 'success'
-        });
       }
     } catch (error) {
       console.error('創建資料夾失敗:', error);
-      setNotification({
-        show: true,
-        message: '創建資料夾失敗',
-        type: 'error'
-      });
     }
   };
 
-  // 修改 notification 的設置方式
-  const showNotification = (message: string, type: 'success' | 'error') => {
-    setNotification({
-      show: true,
-      message,
-      type
-    });
-
-    // 3秒後自動關閉通知
-    setTimeout(() => {
-      setNotification(prev => ({ ...prev, show: false }));
-    }, 3000);
-  };
-
-  // 在上傳檔案的處理中使用新的通知函數
+  // 上傳檔案
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
-    const maxSize = 10 * 1024 * 1024;
+    // 檢查檔案大小和類型
+    const maxSize = 10 * 1024 * 1024; // 10MB
     const allowedTypes = ['application/pdf', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     
     const validFiles = Array.from(files).filter(file => {
       if (file.size > maxSize) {
-        showNotification(`檔案 ${file.name} 超過大小限制 (10MB)`, 'error');
+        setNotification({
+          show: true,
+          message: `檔案 ${file.name} 超過大小限制 (10MB)`,
+          type: 'error'
+        });
         return false;
       }
       if (!allowedTypes.includes(file.type)) {
-        showNotification(`檔案 ${file.name} 類型不支援`, 'error');
+        setNotification({
+          show: true,
+          message: `檔案 ${file.name} 類型不支援`,
+          type: 'error'
+        });
         return false;
       }
       return true;
@@ -178,14 +155,10 @@ export const FileManager: React.FC<FileManagerProps> = ({
       
       if (response.ok) {
         fetchFiles();
-        showNotification('檔案上傳成功', 'success');
+        closeContextMenu();  // 添加這行，上傳成功後關閉右鍵選單
       }
     } catch (error) {
-      console.error('檔案上傳失敗:', error);
-      showNotification('檔案上傳失敗', 'error');
-    } finally {
-      setIsUploading(false);
-      closeContextMenu();
+      console.error('檔案傳失敗:', error);
     }
   };
 
@@ -221,7 +194,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     }
   };
 
-  // 修改處理批次操作的函數
+  // 理批次操作
   const handleBatchAction = async (action: 'translate' | 'direct') => {
     if (!selectedKnowledgeBase || selectedFiles.length === 0) return;
 
@@ -230,27 +203,40 @@ export const FileManager: React.FC<FileManagerProps> = ({
     
     try {
       if (action === 'translate') {
-        await onBatchTranslateAndEmbed(
-          selectedFiles, 
-          selectedKnowledgeBase,
-          setProgress
-        );
+        setProgress(25);
+        await onBatchTranslateAndEmbed(selectedFiles, selectedKnowledgeBase);
+        setProgress(100);
+        setNotification({
+          show: true,
+          message: '翻譯完成！請在翻譯界面查看結果',
+          type: 'success'
+        });
       } else {
-        await onBatchEmbed(
-          selectedFiles, 
-          selectedKnowledgeBase,
-          setProgress
-        );
+        setProgress(25);
+        await onBatchEmbed(selectedFiles, selectedKnowledgeBase);
+        setProgress(100);
+        setNotification({
+          show: true,
+          message: '已成功加知識庫',
+          type: 'success'
+        });
       }
       setSelectedFiles([]);
       setShowActionModal(false);
-      showNotification('處理完成！', 'success');
     } catch (error) {
       console.error('批次處理失敗:', error);
-      showNotification('處理失敗，請稍後重試', 'error');
+      setNotification({
+        show: true,
+        message: '處理失敗，請稍後重試',
+        type: 'error'
+      });
     } finally {
       setProcessing(false);
       setProgress(0);
+      // 3後自動關閉通知
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 3000);
     }
   };
 
@@ -262,7 +248,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
   ) => {
     e.preventDefault();
     if (type === 'file' && target) {
-      // 果點擊的檔案還沒被選中，先選中它
+      // ��果點擊的檔案還沒被選中，先選中它
       if (!selectedFiles.includes(target.id)) {
         if (isCtrlPressed || e.ctrlKey || e.metaKey) {
           setSelectedFiles(prev => [...prev, target.id]);
@@ -411,13 +397,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
           </div>
         </div>
         <div className="flex space-x-4">
-          <button
-            onClick={() => setShowNewFolderModal(true)}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200"
-          >
-            <FolderPlus className="inline-block w-4 h-4 mr-2" />
-            新增資料夾
-          </button>
           <label className="px-4 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:bg-blue-600">
             <input
               type="file"
@@ -434,22 +413,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
       {/* 檔案列表 */}
       <div className="flex-1 overflow-auto p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          {/* 資料夾列表 */}
-          {files.filter(f => f.isDirectory).map(folder => (
-            <div
-              key={folder.id}
-              className="group relative p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setCurrentPath(folder.path)}
-              onContextMenu={(e) => handleContextMenu(e, 'folder', folder)}
-            >
-              <div className="flex flex-col items-center">
-                <FolderPlus className="w-12 h-12 text-yellow-500 mb-2" />
-                <span className="text-center truncate w-full">{folder.name}</span>
-              </div>
-            </div>
-          ))}
-
-          {/* 檔案列表 */}
           {files.filter(f => !f.isDirectory).map(file => (
             <div
               key={file.id}
@@ -592,9 +555,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
       {showActionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg w-96">
-            <h3 className="text-lg font-bold mb-4">
-              {contextMenu?.type === 'folder' ? '處理資料夾' : '處理檔案'}
-            </h3>
+            <h3 className="text-lg font-bold mb-4">選擇目標知識庫</h3>
             
             <div className="mb-4">
               <select
@@ -609,40 +570,15 @@ export const FileManager: React.FC<FileManagerProps> = ({
               </select>
             </div>
 
-            {contextMenu?.type === 'folder' && contextMenu.target && (
-              <p className="text-sm text-gray-500 mb-4">
-                將處理資料夾: {contextMenu.target.path}
-              </p>
-            )}
-
             {processing && (
               <div className="mb-4">
-                <div className="relative pt-1">
-                  <div className="flex mb-2 items-center justify-between">
-                    <div>
-                      <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
-                        處理進度
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs font-semibold inline-block text-blue-600">
-                        {progress}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-100">
-                    <div
-                      style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}
-                      className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
-                    ></div>
-                  </div>
-                  <p className="text-sm text-gray-500 text-center">
-                    {progress < 30 && "準備處理文件..."}
-                    {progress >= 30 && progress < 60 && "正在翻譯文件..."}
-                    {progress >= 60 && progress < 90 && "正在加入知識庫..."}
-                    {progress >= 90 && "即將完成..."}
-                  </p>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                  <div
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
+                <p className="text-sm text-gray-500 text-center">處理中... {progress}%</p>
               </div>
             )}
 
@@ -652,8 +588,9 @@ export const FileManager: React.FC<FileManagerProps> = ({
                 className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200"
                 disabled={processing}
               >
-                ��消
+                取消
               </button>
+              {/* 確認按鈕 */}
               <button
                 onClick={() => handleBatchAction(currentAction)}
                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -666,7 +603,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
         </div>
       )}
 
-      {/* 通知元素 */}
+      {/* 通知元素 - 修改位置和樣式 */}
       {notification.show && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="absolute inset-0 bg-black bg-opacity-30" />

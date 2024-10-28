@@ -77,7 +77,6 @@ export interface FileProcessingHook {
   handleFileUpload: (files: FileWithOptions[]) => Promise<void>;
   handleBatchEmbed: (fileIds: string[], targetKnowledgeBaseId: string) => Promise<void>;
   setTranslatedFiles: React.Dispatch<React.SetStateAction<TranslatedFile[]>>;
-  handleDelete: (fileId: string) => Promise<void>;
 }
 
 export interface KnowledgeBaseHook {
