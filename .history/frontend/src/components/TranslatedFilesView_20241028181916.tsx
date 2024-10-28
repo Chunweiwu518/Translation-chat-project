@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Trash2, Download } from 'lucide-react';
-import { TranslatedFile } from '../types';
+
+interface TranslatedFile {
+  id: string;
+  name: string;
+  originalContent: string;
+  translatedContent: string;
+  status: 'completed' | 'failed' | 'pending';
+}
 
 interface TranslatedFilesViewProps {
   files: TranslatedFile[];
@@ -57,11 +64,6 @@ export const TranslatedFilesView: React.FC<TranslatedFilesViewProps> = ({
                     ? '翻譯失敗'
                     : '處理中'}
                 </span>
-                {file.isEmbedded && (
-                  <span className="text-sm px-2 py-1 rounded bg-blue-100 text-blue-600">
-                    已加入知識庫
-                  </span>
-                )}
               </div>
               <div className="flex items-center space-x-2">
                 <button
@@ -88,27 +90,15 @@ export const TranslatedFilesView: React.FC<TranslatedFilesViewProps> = ({
                   {/* 原文內容 */}
                   <div>
                     <h3 className="font-medium mb-2 text-gray-700">原文</h3>
-                    <div 
-                      className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap min-h-[200px] max-h-[500px] overflow-y-auto font-mono text-sm"
-                      style={{ 
-                        wordBreak: 'break-word',
-                        lineHeight: '1.6'
-                      }}
-                    >
+                    <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap min-h-[200px] max-h-[500px] overflow-y-auto">
                       {file.originalContent}
                     </div>
                   </div>
                   {/* 翻譯內容 */}
                   <div>
                     <h3 className="font-medium mb-2 text-gray-700">翻譯</h3>
-                    <div 
-                      className="bg-blue-50 p-4 rounded-lg whitespace-pre-wrap min-h-[200px] max-h-[500px] overflow-y-auto font-mono text-sm"
-                      style={{ 
-                        wordBreak: 'break-word',
-                        lineHeight: '1.6'
-                      }}
-                    >
-                      {file.translatedContent.replace(/\n\s*\n/g, '\n\n')}  {/* 處理多餘的空行 */}
+                    <div className="bg-blue-50 p-4 rounded-lg whitespace-pre-wrap min-h-[200px] max-h-[500px] overflow-y-auto">
+                      {file.translatedContent}
                     </div>
                   </div>
                 </div>

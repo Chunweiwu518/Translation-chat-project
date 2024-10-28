@@ -259,11 +259,11 @@ const App: React.FC = () => {
 
         // 完成當前檔案處理
         currentFileIndex++;
-        onProgress(Math.round((currentFileIndex / totalFiles) * 100));
+        setProgress(Math.round((currentFileIndex / totalFiles) * 100));
       }
 
       // 確保最後顯示 100%
-      onProgress(100);
+      setProgress(100);
     } catch (error) {
       console.error('處理檔案時出錯:', error);
       throw error;
@@ -271,11 +271,7 @@ const App: React.FC = () => {
   };
 
   // 修改批次直接加入知識庫函數
-  const handleBatchEmbed = async (
-    files: string[], 
-    knowledgeBaseId: string,
-    onProgress: (progress: number) => void
-  ): Promise<void> => {
+  const handleBatchEmbed = async (files: string[], knowledgeBaseId: string): Promise<void> => {
     try {
       // 依序處理每個檔案
       for (const file_path of files) {

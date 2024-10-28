@@ -161,20 +161,10 @@ const App: React.FC = () => {
   const chat = useChat();
 
   // 修改批次翻譯並加入知識庫函數
-  const handleBatchTranslateAndEmbed = async (
-    files: string[], 
-    knowledgeBaseId: string,
-    onProgress: (progress: number) => void
-  ): Promise<void> => {
+  const handleBatchTranslateAndEmbed = async (files: string[], knowledgeBaseId: string): Promise<void> => {
     try {
-      const totalFiles = files.length;
-      let currentFileIndex = 0;
-
+      // 依序處理每個檔案
       for (const file_path of files) {
-        // 更新進度 - 開始處理新檔案
-        const baseProgress = (currentFileIndex / totalFiles) * 100;
-        onProgress(Math.round(baseProgress));
-
         // 從檔案系統讀取檔案內容
         const fileResponse = await fetch(`http://localhost:5000/api/files/content/${file_path}`);
         if (!fileResponse.ok) {
@@ -182,15 +172,13 @@ const App: React.FC = () => {
         }
         const { content: originalContent } = await fileResponse.json();
 
-        // 更新進度 - 開始翻譯
-        onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.3));
-
-        // 翻譯處理...
+        // 創建 FormData 用於翻譯
         const formData = new FormData();
         const blob = new Blob([originalContent], { type: 'text/plain' });
         const fileName = file_path.split('/').pop() || 'file.txt';
         formData.append('file', blob, fileName);
 
+        // 翻譯
         const translateResponse = await fetch(
           'http://localhost:5000/api/upload_and_translate',
           {
@@ -198,9 +186,6 @@ const App: React.FC = () => {
             body: formData,
           }
         );
-
-        // 更新進度 - 翻譯完成
-        onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.6));
 
         if (!translateResponse.ok) {
           const errorData = await translateResponse.json();
@@ -248,22 +233,11 @@ const App: React.FC = () => {
           id: translatedFileName,
           name: translatedFileName,
           translatedContent: data.translated_content,
-          originalContent: originalContent,
-          status: 'completed', // 添加 status 屬性
+          originalContent: originalContent,  // 保存原始內容
           isEmbedded: true,
           embeddingProgress: 100
         }]);
-
-        // 更新進度 - 加入知識庫
-        onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.9));
-
-        // 完成當前檔案處理
-        currentFileIndex++;
-        onProgress(Math.round((currentFileIndex / totalFiles) * 100));
       }
-
-      // 確保最後顯示 100%
-      onProgress(100);
     } catch (error) {
       console.error('處理檔案時出錯:', error);
       throw error;
@@ -271,11 +245,7 @@ const App: React.FC = () => {
   };
 
   // 修改批次直接加入知識庫函數
-  const handleBatchEmbed = async (
-    files: string[], 
-    knowledgeBaseId: string,
-    onProgress: (progress: number) => void
-  ): Promise<void> => {
+  const handleBatchEmbed = async (files: string[], knowledgeBaseId: string): Promise<void> => {
     try {
       // 依序處理每個檔案
       for (const file_path of files) {
@@ -353,7 +323,7 @@ const App: React.FC = () => {
       chat.setMessages([successMessage]);
 
     } catch (error: unknown) {
-      console.error('處理檔案對話時錯:', error);
+      console.error('處理檔案對話時出錯:', error);
       const errorMessage: Message = {
         sender: "system",
         text: `處理檔案時出錯: ${error instanceof Error ? error.message : '未知錯誤'}`,
@@ -420,7 +390,11 @@ const App: React.FC = () => {
         ) : currentMode === "translated-files" ? (
           <TranslatedFilesView
             files={fileProcessing.translatedFiles}
-            onDelete={fileProcessing.handleDelete}  // 直接使用 hook 提供的 handleDelete
+            onDelete={(fileId) => {
+              fileProcessing.setTranslatedFiles(prev => 
+                prev.filter(file => file.id !== fileId)
+              );
+            }}
             onDownload={handleDownloadTranslation}
           />
         ) : null}
