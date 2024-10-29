@@ -151,34 +151,18 @@ export const KnowledgeBaseManager: React.FC<KnowledgeBaseManagerProps> = ({
                   <Database className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={async (e) => {
+                  onClick={(e) => {
                     e.stopPropagation();  // 防止事件冒泡
                     if (window.confirm('確定要重置此知識庫嗎？所有文件將被清除。')) {
-                      setResettingKB(kb.id);
-                      setIsLoading(true);
-                      try {
-                        await onReset(kb.id);
-                        if (expandedKB === kb.id) {
-                          fetchKnowledgeBaseFiles(kb.id);
-                        }
-                        setNotification({
-                          show: true,
-                          message: '知識庫已成功重置',
-                          type: 'success'
-                        });
-                      } catch (error) {
-                        setNotification({
-                          show: true,
-                          message: '重置知識庫失敗',
-                          type: 'error'
-                        });
-                      } finally {
-                        setResettingKB(null);
-                        setIsLoading(false);
-                        setTimeout(() => {
-                          setNotification(prev => ({ ...prev, show: false }));
-                        }, 700);
-                      }
+                      handleReset(kb.id);
+                      setNotification({
+                        show: true,
+                        message: '知識庫已成功重置',
+                        type: 'success'
+                      });
+                      setTimeout(() => {
+                        setNotification(prev => ({ ...prev, show: false }));
+                      }, 700);
                     }
                   }}
                   className="p-2 hover:bg-yellow-100 rounded text-yellow-500 relative"

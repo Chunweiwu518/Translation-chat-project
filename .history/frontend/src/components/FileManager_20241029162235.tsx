@@ -584,11 +584,8 @@ export const FileManager: React.FC<FileManagerProps> = ({
               <button
                 className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center text-red-500"
                 onClick={() => {
-                  if (window.confirm('確定要刪除此資料夾及其所有內容嗎？此操作無法恢復。')) {
-                    handleDeleteFolder(contextMenu.target!.path);
-                    closeContextMenu();
-                    showNotification('資料夾刪除成功', 'success');
-                  }
+                  handleDeleteFolder(contextMenu.target!.path);
+                  closeContextMenu();
                 }}
               >
                 <Trash2 className="w-5 h-5 mr-3" />

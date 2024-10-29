@@ -315,20 +315,24 @@ export const FileManager: React.FC<FileManagerProps> = ({
     }
   };
 
-  // 修改刪除資料夾的函數
+  // 添加刪除資料夾的函數
   const handleDeleteFolder = async (folderPath: string) => {
+    if (!window.confirm('確定要刪除此資料夾及其所有內容嗎？操作無法恢復。')) {
+      return;
+    }
+
     try {
-      const encodedPath = encodeURIComponent(folderPath);
-      const response = await fetch(`http://localhost:5000/api/files/folder/${encodedPath}`, {
+      const encodedFolderPath = encodeURIComponent(folderPath);
+      const response = await fetch(`http://localhost:5000/api/files/folder/${encodedFolderPath}`, {
         method: 'DELETE'
       });
 
       if (response.ok) {
         fetchFiles();
+        closeContextMenu();
         showNotification('資料夾刪除成功', 'success');
       } else {
-        const error = await response.json();
-        throw new Error(error.detail || '刪除資料夾失敗');
+        showNotification('資料夾刪除失敗', 'error');
       }
     } catch (error) {
       console.error('刪除資料夾失敗:', error);
@@ -390,7 +394,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="搜尋檔案..."
+              placeholder="尋檔案..."
               className="pl-10 pr-4 py-2 border rounded-lg"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -418,7 +422,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
         </div>
       </div>
 
-      {/* 檔案列表 */}
+      {/* 檔��列表 */}
       <div className="flex-1 overflow-auto p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {/* 資料夾列表 */}
@@ -426,19 +430,8 @@ export const FileManager: React.FC<FileManagerProps> = ({
             <div
               key={folder.id}
               className="group relative p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-              onClick={(e) => {
-                // 如果是右鍵點擊，不執行資料夾切換
-                if (e.button === 2) {
-                  e.preventDefault();
-                  return;
-                }
-                setCurrentPath(folder.path);
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleContextMenu(e, 'folder', folder);
-              }}
+              onClick={() => setCurrentPath(folder.path)}
+              onContextMenu={(e) => handleContextMenu(e, 'folder', folder)}
             >
               <div className="flex flex-col items-center">
                 <FolderPlus className="w-12 h-12 text-yellow-500 mb-2" />
@@ -490,138 +483,17 @@ export const FileManager: React.FC<FileManagerProps> = ({
           }}
           onClick={e => e.stopPropagation()}
         >
-          {contextMenu.type === 'file' ? (
-            <>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
-                onClick={() => {
-                  setCurrentAction('translate');
-                  setShowActionModal(true);
-                  closeContextMenu();
-                }}
-              >
-                <Languages className="w-5 h-5 mr-3" />
-                <span className="flex-1">翻譯後加入知識庫 ({selectedFiles.length} 個檔案)</span>
-              </button>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
-                onClick={() => {
-                  setCurrentAction('direct');
-                  setShowActionModal(true);
-                  closeContextMenu();
-                }}
-              >
-                <Database className="w-5 h-5 mr-3" />
-                <span className="flex-1">直接加入知識庫 ({selectedFiles.length} 個檔案)</span>
-              </button>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
-                onClick={() => {
-                  onModeChange("chat");
-                  onFileChat(selectedFiles);
-                  closeContextMenu();
-                }}
-              >
-                <MessageSquare className="w-5 h-5 mr-3" />
-                <span className="flex-1">開始檔案對話 ({selectedFiles.length} 個檔案)</span>
-              </button>
-              <div className="border-t my-1"></div>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center text-red-500"
-                onClick={() => {
-                  selectedFiles.forEach(fileId => handleDeleteFile(fileId));
-                  closeContextMenu();
-                }}
-              >
-                <Trash2 className="w-5 h-5 mr-3" />
-                <span className="flex-1">刪除選中檔案 ({selectedFiles.length})</span>
-              </button>
-            </>
-          ) : contextMenu.type === 'folder' ? (
-            <>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
-                onClick={() => {
-                  const fileInput = document.createElement('input');
-                  fileInput.type = 'file';
-                  fileInput.multiple = true;
-                  fileInput.onchange = async (e) => {
-                    const files = (e.target as HTMLInputElement).files;
-                    if (files) {
-                      const formData = new FormData();
-                      Array.from(files).forEach(file => {
-                        formData.append('files', file);
-                      });
-                      // 使用資料夾的路徑
-                      formData.append('path', contextMenu.target!.path);
-
-                      try {
-                        setIsUploading(true);
-                        const response = await fetch('http://localhost:5000/api/files/upload', {
-                          method: 'POST',
-                          body: formData,
-                        });
-                        
-                        if (response.ok) {
-                          fetchFiles();
-                          showNotification('檔案上傳成功', 'success');
-                        }
-                      } catch (error) {
-                        console.error('檔案上傳失敗:', error);
-                        showNotification('檔案上傳失敗', 'error');
-                      } finally {
-                        setIsUploading(false);
-                        closeContextMenu();
-                      }
-                    }
-                  };
-                  fileInput.click();
-                }}
-              >
-                <Upload className="w-5 h-5 mr-3" />
-                <span className="flex-1">上傳檔案到此資料夾</span>
-              </button>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center text-red-500"
-                onClick={() => {
-                  if (window.confirm('確定要刪除此資料夾及其所有內容嗎？此操作無法恢復。')) {
-                    handleDeleteFolder(contextMenu.target!.path);
-                    closeContextMenu();
-                    showNotification('資料夾刪除成功', 'success');
-                  }
-                }}
-              >
-                <Trash2 className="w-5 h-5 mr-3" />
-                <span className="flex-1">刪除資料夾</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
-                onClick={() => {
-                  setShowNewFolderModal(true);
-                  closeContextMenu();
-                }}
-              >
-                <FolderPlus className="w-5 h-5 mr-3" />
-                <span className="flex-1">新增資料夾</span>
-              </button>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
-                onClick={() => {
-                  const fileInput = document.createElement('input');
-                  fileInput.type = 'file';
-                  fileInput.multiple = true;
-                  fileInput.onchange = (e) => handleFileUpload(e as any);
-                  fileInput.click();
-                  closeContextMenu();
-                }}
-              >
-                <Upload className="w-5 h-5 mr-3" />
-                <span className="flex-1">上傳檔案</span>
-              </button>
-            </>
+          {contextMenu.type === 'folder' && (
+            <button
+              className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center text-red-500"
+              onClick={() => {
+                handleDeleteFolder(contextMenu.target!.path);
+                closeContextMenu();
+              }}
+            >
+              <Trash2 className="w-5 h-5 mr-3" />
+              <span className="flex-1">刪除資料夾</span>
+            </button>
           )}
         </div>
       )}
@@ -631,37 +503,27 @@ export const FileManager: React.FC<FileManagerProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg w-96">
             <h3 className="text-lg font-bold mb-4">新增資料夾</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (newFolderName) {
-                handleCreateFolder();
-              }
-            }}>
-              <input
-                type="text"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="資料夾名稱"
-                className="w-full p-2 border rounded mb-4"
-                autoFocus
-              />
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewFolderModal(false)}
-                  className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  disabled={!newFolderName}
-                >
-                  創建
-                </button>
-              </div>
-            </form>
+            <input
+              type="text"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="資料夾名稱"
+              className="w-full p-2 border rounded mb-4"
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowNewFolderModal(false)}
+                className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleCreateFolder}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                創建
+              </button>
+            </div>
           </div>
         </div>
       )}

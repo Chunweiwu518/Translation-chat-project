@@ -587,7 +587,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
                   if (window.confirm('確定要刪除此資料夾及其所有內容嗎？此操作無法恢復。')) {
                     handleDeleteFolder(contextMenu.target!.path);
                     closeContextMenu();
-                    showNotification('資料夾刪除成功', 'success');
                   }
                 }}
               >
@@ -631,37 +630,27 @@ export const FileManager: React.FC<FileManagerProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg w-96">
             <h3 className="text-lg font-bold mb-4">新增資料夾</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (newFolderName) {
-                handleCreateFolder();
-              }
-            }}>
-              <input
-                type="text"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="資料夾名稱"
-                className="w-full p-2 border rounded mb-4"
-                autoFocus
-              />
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewFolderModal(false)}
-                  className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  disabled={!newFolderName}
-                >
-                  創建
-                </button>
-              </div>
-            </form>
+            <input
+              type="text"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="資料夾名稱"
+              className="w-full p-2 border rounded mb-4"
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowNewFolderModal(false)}
+                className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleCreateFolder}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                創建
+              </button>
+            </div>
           </div>
         </div>
       )}

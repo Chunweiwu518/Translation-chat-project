@@ -288,7 +288,6 @@ async def switch_knowledge_base(kb_id: str):
 
 @app.post("/api/knowledge_base/reset/{kb_id}")
 async def reset_knowledge_base(kb_id: str):
-    """重置知識庫"""
     try:
         knowledge_bases = load_knowledge_bases()
         if kb_id not in knowledge_bases:
@@ -713,7 +712,7 @@ async def delete_file(file_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 增創建資夾的���求模型
+# 增創建資夾的請求模型
 class CreateFolderRequest(BaseModel):
     path: str
 
@@ -921,7 +920,7 @@ async def get_knowledge_base_files(kb_id: str):
             # 獲取所有文件
             files = []
             try:
-                # 使用更安全的方式獲取文件表
+                # 使用更安全的方式獲取文件列表
                 if hasattr(temp_store, "_collection"):
                     collection = temp_store._collection
                     if collection:
@@ -976,39 +975,6 @@ async def get_knowledge_base_files(kb_id: str):
 
     except Exception as e:
         print(f"處理知識庫文件請求時出錯: {str(e)}")
-        return []
-
-
-# 添加新的路由來處理翻譯文件的請求
-@app.get("/api/translated_files")
-async def get_translated_files():
-    """獲取已翻譯的文件列表"""
-    try:
-        # 確保 translations 目錄存在
-        translations_path = Path("translations")
-        if not translations_path.exists():
-            translations_path.mkdir(parents=True)
-            return []
-
-        # 獲取所有翻譯文件
-        translated_files = []
-        for file_path in translations_path.glob("*"):
-            if file_path.is_file():
-                file_stat = file_path.stat()
-                translated_files.append(
-                    {
-                        "id": file_path.stem,
-                        "name": file_path.name,
-                        "size": file_stat.st_size,
-                        "created_at": datetime.fromtimestamp(
-                            file_stat.st_ctime
-                        ).isoformat(),
-                    }
-                )
-
-        return translated_files
-    except Exception as e:
-        print(f"獲取翻譯文件列表時出錯: {str(e)}")
         return []
 
 
