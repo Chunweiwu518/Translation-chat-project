@@ -79,10 +79,19 @@ export const KnowledgeBaseManager: React.FC<KnowledgeBaseManagerProps> = ({
 
   // 修改重置知識庫的處理函數
   const handleReset = async (kbId: string) => {
+    if (!window.confirm('確定要重置此知識庫嗎？所有文件將被清除。')) {
+      return;
+    }
+
     setResettingKB(kbId);
     setIsLoading(true);
     try {
       await onReset(kbId);
+      setNotification({
+        show: true,
+        message: '知識庫已成功重置',
+        type: 'success'
+      });
       if (expandedKB === kbId) {
         fetchKnowledgeBaseFiles(kbId);
       }
@@ -95,6 +104,9 @@ export const KnowledgeBaseManager: React.FC<KnowledgeBaseManagerProps> = ({
     } finally {
       setResettingKB(null);
       setIsLoading(false);
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 700);
     }
   };
 
@@ -151,35 +163,9 @@ export const KnowledgeBaseManager: React.FC<KnowledgeBaseManagerProps> = ({
                   <Database className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={async (e) => {
+                  onClick={(e) => {
                     e.stopPropagation();  // 防止事件冒泡
-                    if (window.confirm('確定要重置此知識庫嗎？所有文件將被清除。')) {
-                      setResettingKB(kb.id);
-                      setIsLoading(true);
-                      try {
-                        await onReset(kb.id);
-                        if (expandedKB === kb.id) {
-                          fetchKnowledgeBaseFiles(kb.id);
-                        }
-                        setNotification({
-                          show: true,
-                          message: '知識庫已成功重置',
-                          type: 'success'
-                        });
-                      } catch (error) {
-                        setNotification({
-                          show: true,
-                          message: '重置知識庫失敗',
-                          type: 'error'
-                        });
-                      } finally {
-                        setResettingKB(null);
-                        setIsLoading(false);
-                        setTimeout(() => {
-                          setNotification(prev => ({ ...prev, show: false }));
-                        }, 700);
-                      }
-                    }
+                    handleReset(kb.id);
                   }}
                   className="p-2 hover:bg-yellow-100 rounded text-yellow-500 relative"
                   title="重置知識庫"
@@ -254,82 +240,53 @@ export const KnowledgeBaseManager: React.FC<KnowledgeBaseManagerProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white rounded-lg p-6 w-96">
             <h3 className="text-lg font-bold mb-4">新增知識庫</h3>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              if (newKBName) {
-                await onCreateNew(newKBName, newKBDescription);
-                setNewKBName('');
-                setNewKBDescription('');
-                setShowCreateForm(false);
-              }
-            }}>
-              <input
-                type="text"
-                placeholder="知識庫名稱"
-                className="w-full p-2 border rounded mb-4"
-                value={newKBName}
-                onChange={e => setNewKBName(e.target.value)}
-                autoFocus
-              />
-              <input
-                type="text"
-                placeholder="描述（選填）"
-                className="w-full p-2 border rounded mb-4"
-                value={newKBDescription}
-                onChange={e => setNewKBDescription(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && newKBName) {
-                    e.preventDefault();
-                    onCreateNew(newKBName, newKBDescription);
+            <input
+              type="text"
+              placeholder="知識庫名稱"
+              className="w-full p-2 border rounded mb-4"
+              value={newKBName}
+              onChange={e => setNewKBName(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="描述（選填）"
+              className="w-full p-2 border rounded mb-4"
+              value={newKBDescription}
+              onChange={e => setNewKBDescription(e.target.value)}
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowCreateForm(false)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+              >
+                取消
+              </button>
+              <button
+                onClick={async () => {
+                  if (newKBName) {
+                    await onCreateNew(newKBName, newKBDescription);
                     setNewKBName('');
                     setNewKBDescription('');
                     setShowCreateForm(false);
                   }
                 }}
-              />
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  disabled={!newKBName}
-                >
-                  創建
-                </button>
-              </div>
-            </form>
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                創建
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* 添加通知元素 */}
       {notification.show && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black bg-opacity-30" />
-          <div
-            className={`relative px-6 py-4 rounded-lg shadow-lg ${
-              notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-            } text-white transform transition-all duration-300 ease-out`}
-          >
-            <div className="flex items-center space-x-2">
-              {notification.type === 'success' ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              )}
-              <span className="text-lg font-medium">{notification.message}</span>
-            </div>
-          </div>
+        <div
+          className={`fixed inset-0 flex items-center justify-center z-50 transition-all duration-300 ${
+            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}
+        >
+          {notification.message}
         </div>
       )}
     </div>

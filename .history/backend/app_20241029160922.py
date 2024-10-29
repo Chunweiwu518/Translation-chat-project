@@ -288,7 +288,6 @@ async def switch_knowledge_base(kb_id: str):
 
 @app.post("/api/knowledge_base/reset/{kb_id}")
 async def reset_knowledge_base(kb_id: str):
-    """重置知識庫"""
     try:
         knowledge_bases = load_knowledge_bases()
         if kb_id not in knowledge_bases:
@@ -713,7 +712,7 @@ async def delete_file(file_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 增創建資夾的���求模型
+# 增創建資夾的請求模型
 class CreateFolderRequest(BaseModel):
     path: str
 
@@ -921,7 +920,7 @@ async def get_knowledge_base_files(kb_id: str):
             # 獲取所有文件
             files = []
             try:
-                # 使用更安全的方式獲取文件表
+                # 使用更安全的方式獲取文件���表
                 if hasattr(temp_store, "_collection"):
                     collection = temp_store._collection
                     if collection:

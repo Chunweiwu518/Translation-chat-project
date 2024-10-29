@@ -20,7 +20,7 @@ export function useFileProcessing(): FileProcessingHook {
     for (const file of files) {
       try {
         const formData = new FormData();
-        formData.append('file', file.file as unknown as File);
+        formData.append('file', file as File);
 
         const response = await fetch(
           file.needTranslation
@@ -46,6 +46,13 @@ export function useFileProcessing(): FileProcessingHook {
             embeddingProgress: 0
           };
 
+          // 保存翻譯文件到後端
+          await fetch('http://localhost:5000/api/translated_files', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newFile)
+          });
+
           setTranslatedFiles(prev => [...prev, newFile]);
         }
       } catch (error) {
@@ -59,6 +66,13 @@ export function useFileProcessing(): FileProcessingHook {
           isEmbedded: false,
           embeddingProgress: 0
         };
+
+        // 保存失敗記錄到後端
+        await fetch('http://localhost:5000/api/translated_files', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(failedFile)
+        });
 
         setTranslatedFiles(prev => [...prev, failedFile]);
       }
