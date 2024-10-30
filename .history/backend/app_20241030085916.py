@@ -406,14 +406,14 @@ async def upload_and_translate(file: UploadFile = File(...)):
         # 讀取上傳的檔案內容
         content = await file.read()
 
-        # 將內容寫入臨時文件
-        temp_file_path = Path(Config.UPLOAD_FOLDER) / file.filename
-        with open(temp_file_path, "wb") as f:
+        # 保存原始檔案
+        original_file_path = Path(Config.UPLOAD_FOLDER) / file.filename
+        with open(original_file_path, "wb") as f:
             f.write(content)
 
         try:
             # 讀取檔案內容
-            text_content = load_pdf(str(temp_file_path))
+            text_content = load_pdf(str(original_file_path))
 
             if not text_content:
                 raise ValueError("無法讀取檔案內容")
@@ -427,16 +427,29 @@ async def upload_and_translate(file: UploadFile = File(...)):
                 Config.COUNTRY,
             )
 
-            # 清理臨時文件
-            if temp_file_path.exists():
-                temp_file_path.unlink()
+            # 保存翻譯後的檔案
+            translations_path = Path("translations")
+            translations_path.mkdir(exist_ok=True)
+            
+            # 生成翻譯檔案名稱
+            filename_stem = Path(file.filename).stem
+            filename_suffix = Path(file.filename).suffix
+            translated_filename = f"{filename_stem}_translated{filename_suffix}"
+            translated_file_path = translations_path / translated_filename
 
-            return {"content": text_content, "translated_content": translated_content}
+            # 保存翻譯內容
+            with open(translated_file_path, "w", encoding="utf-8") as f:
+                f.write(translated_content)
+
+            return {
+                "content": text_content, 
+                "translated_content": translated_content,
+                "original_path": str(original_file_path),
+                "translated_path": str(translated_file_path)
+            }
 
         except Exception as e:
             print(f"處理檔案內容時出錯: {str(e)}")
-            if temp_file_path.exists():
-                temp_file_path.unlink()
             raise HTTPException(status_code=500, detail=f"處理檔案內容時出錯: {str(e)}")
 
     except Exception as e:
@@ -1039,9 +1052,5 @@ if __name__ == "__main__":
     translations_path = Path("translations")
     if not translations_path.exists():
         translations_path.mkdir(parents=True)
-
-    # 確保 translated_files 目錄存在
-    translated_files_path = Path(Config.UPLOAD_FOLDER) / "translated_files"
-    translated_files_path.mkdir(parents=True, exist_ok=True)
 
     uvicorn.run(app, host="0.0.0.0", port=5000)

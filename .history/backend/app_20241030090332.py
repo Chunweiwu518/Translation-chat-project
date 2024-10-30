@@ -713,7 +713,7 @@ async def delete_file(file_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 增創建資夾的求模型
+# 增創建資夾的���求模型
 class CreateFolderRequest(BaseModel):
     path: str
 
@@ -1039,9 +1039,5 @@ if __name__ == "__main__":
     translations_path = Path("translations")
     if not translations_path.exists():
         translations_path.mkdir(parents=True)
-
-    # 確保 translated_files 目錄存在
-    translated_files_path = Path(Config.UPLOAD_FOLDER) / "translated_files"
-    translated_files_path.mkdir(parents=True, exist_ok=True)
 
     uvicorn.run(app, host="0.0.0.0", port=5000)
