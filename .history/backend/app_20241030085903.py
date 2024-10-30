@@ -437,7 +437,7 @@ async def upload_and_translate(file: UploadFile = File(...)):
             print(f"處理檔案內容時出錯: {str(e)}")
             if temp_file_path.exists():
                 temp_file_path.unlink()
-            raise HTTPException(status_code=500, detail=f"處理檔案內容時出錯: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"處理��案內容時出錯: {str(e)}")
 
     except Exception as e:
         print(f"上傳和翻譯過程中出錯: {str(e)}")
@@ -1039,9 +1039,5 @@ if __name__ == "__main__":
     translations_path = Path("translations")
     if not translations_path.exists():
         translations_path.mkdir(parents=True)
-
-    # 確保 translated_files 目錄存在
-    translated_files_path = Path(Config.UPLOAD_FOLDER) / "translated_files"
-    translated_files_path.mkdir(parents=True, exist_ok=True)
 
     uvicorn.run(app, host="0.0.0.0", port=5000)

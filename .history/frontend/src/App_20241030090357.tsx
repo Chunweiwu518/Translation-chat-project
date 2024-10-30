@@ -171,11 +171,6 @@ const App: React.FC = () => {
       let currentFileIndex = 0;
 
       for (const file_path of files) {
-        // 獲取檔案的目錄路徑
-        const pathParts = file_path.split('/');
-        pathParts.pop(); // 移除檔案名
-        const directoryPath = pathParts.join('/');
-
         // 更新進度 - 開始處理新檔案
         const baseProgress = (currentFileIndex / totalFiles) * 100;
         onProgress(Math.round(baseProgress));
@@ -237,7 +232,7 @@ const App: React.FC = () => {
         const originalFormData = new FormData();
         const originalBlob = new Blob([originalContent], { type: 'text/plain' });
         originalFormData.append('files', originalBlob, fileName);
-        originalFormData.append('path', directoryPath || '/');  // 使用檔案的原始目錄路徑
+        originalFormData.append('path', currentPath || '/');  // 使用當前路徑或根目錄
 
         // 上傳原始文件
         const uploadOriginalResponse = await fetch('http://localhost:5000/api/files/upload', {
@@ -248,7 +243,7 @@ const App: React.FC = () => {
         if (!uploadOriginalResponse.ok) {
           throw new Error('保存原始文件失敗');
         }
-
+        
         // 加入知識庫
         const embedResponse = await fetch('http://localhost:5000/api/embed', {
           method: 'POST',
