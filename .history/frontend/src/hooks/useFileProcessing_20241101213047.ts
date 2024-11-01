@@ -4,16 +4,7 @@ import { FileWithOptions, TranslatedFile, FileProcessingHook } from '../types';
 
 export function useFileProcessing(): FileProcessingHook {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
-  const [translatedFiles, setTranslatedFiles] = useState<TranslatedFile[]>(() => {
-    // 從 localStorage 讀取已保存的翻譯文件
-    const savedFiles = localStorage.getItem('translatedFiles');
-    return savedFiles ? JSON.parse(savedFiles) : [];
-  });
-
-  // 當 translatedFiles 改變時，保存到 localStorage
-  useEffect(() => {
-    localStorage.setItem('translatedFiles', JSON.stringify(translatedFiles));
-  }, [translatedFiles]);
+  const [translatedFiles, setTranslatedFiles] = useState<TranslatedFile[]>([]);
 
   useEffect(() => {
     const fetchTranslations = async () => {
@@ -23,21 +14,9 @@ export function useFileProcessing(): FileProcessingHook {
         console.log('API 響應狀態:', response.status);
         
         if (response.ok) {
-          const data = await response.json() as TranslatedFile[];
+          const data = await response.json();
           console.log('成功獲取翻譯數據:', data);
-          setTranslatedFiles(prev => {
-            // 合併後端數據和本地數據，以 id 為鍵去重
-            const mergedFiles = [...prev];
-            data.forEach((newFile: TranslatedFile) => {
-              const existingIndex = mergedFiles.findIndex(f => f.id === newFile.id);
-              if (existingIndex === -1) {
-                mergedFiles.push(newFile);
-              } else {
-                mergedFiles[existingIndex] = newFile;
-              }
-            });
-            return mergedFiles;
-          });
+          setTranslatedFiles(data);
         } else {
           console.error('獲取翻譯失敗:', response.status, response.statusText);
         }
@@ -79,7 +58,6 @@ export function useFileProcessing(): FileProcessingHook {
             embeddingProgress: 0
           };
 
-          // 保存到後端
           await fetch('http://localhost:5000/api/translations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

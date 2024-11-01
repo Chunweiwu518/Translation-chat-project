@@ -730,7 +730,7 @@ async def create_folder(request: CreateFolderRequest):
         # 確保路徑是相對於 UPLOAD_FOLDER 的
         folder_path = Path(Config.UPLOAD_FOLDER) / request.path.lstrip("/")
 
-        # 檢��路徑是否在 UPLOAD_FOLDER 內
+        # 檢查路徑是否在 UPLOAD_FOLDER 內
         if not str(folder_path.resolve()).startswith(
             str(Path(Config.UPLOAD_FOLDER).resolve())
         ):
@@ -773,7 +773,7 @@ async def delete_folder(folder_path: str):
 
         # 刪除資料夾及其內容
         shutil.rmtree(folder_path)
-        return {"message": "資料夾刪除功"}
+        return {"message": "資料夾刪除成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1080,24 +1080,18 @@ async def download_file(file_path: str):
 @app.get("/api/translations", response_model=List[dict])
 async def get_translations():
     """獲取所有翻譯結果"""
-    print("開始處理 GET /api/translations 請求")  # 添加調試日誌
     try:
         translations_file = Path("translations/translations.json")
-        print(f"檢查文件路徑: {translations_file}")  # 添加調試日誌
-        
         translations_file.parent.mkdir(parents=True, exist_ok=True)
         
         if not translations_file.exists():
-            print("translations.json 不存在，創建新文件")  # 添加調試日誌
+            # 如果文件不存在，創建一個空的 JSON 文件
             with open(translations_file, "w", encoding="utf-8") as f:
                 json.dump([], f)
             return []
         
-        print("讀取 translations.json")  # 添加調試日誌
         with open(translations_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            print(f"成功讀取數據，包含 {len(data)} 條記錄")  # 添加調試日誌
-            return data
+            return json.load(f)
     except Exception as e:
         print(f"讀取翻譯結果時出錯: {str(e)}")
         return []
@@ -1166,7 +1160,7 @@ if __name__ == "__main__":
     default_kb_path = Path(Config.CHROMA_PATH) / "default"
     default_kb_path.mkdir(parents=True, exist_ok=True)
 
-    # 初化知識庫配置文件
+    # 初��化知識庫配置文件
     if not (Path(Config.CHROMA_PATH) / "knowledge_bases.json").exists():
         save_knowledge_bases(
             {
@@ -1187,20 +1181,13 @@ if __name__ == "__main__":
     translated_files_path = Path(Config.UPLOAD_FOLDER) / "translated_files"
     translated_files_path.mkdir(parents=True, exist_ok=True)
 
-    # 確保 translations 目錄和文件存在（只保留一次初始化）
+    # 確保 translations 目錄和文件存在
     translations_path = Path("translations")
     translations_path.mkdir(parents=True, exist_ok=True)
     
     translations_file = translations_path / "translations.json"
     if not translations_file.exists():
-        print(f"創建 translations.json 文件: {translations_file}")  # 添加調試日誌
         with open(translations_file, "w", encoding="utf-8") as f:
             json.dump([], f, ensure_ascii=False)
-
-    # 驗證文件是否成功創建
-    if translations_file.exists():
-        print("translations.json 文件已成功創建")
-    else:
-        print("警告：translations.json 文件創建失敗")
 
     uvicorn.run(app, host="0.0.0.0", port=5000)
