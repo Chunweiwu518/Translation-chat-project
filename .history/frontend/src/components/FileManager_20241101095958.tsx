@@ -366,7 +366,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     };
   }, []);
 
-  // 修改下載檔案的處理函數
+  // 添加下載檔案的函數
   const handleDownloadFile = async (file: FileInfo) => {
     try {
       // 構建完整的檔案路徑
@@ -376,8 +376,14 @@ export const FileManager: React.FC<FileManagerProps> = ({
       
       console.log('準備下載檔案:', filePath);
       
-      // 使用 GET 請求而不是 POST
-      const response = await fetch(`http://localhost:5000/api/files/download/${encodeURIComponent(filePath)}`);
+      // 發送下載請求
+      const response = await fetch(`http://localhost:5000/api/files/download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ file_path: filePath })
+      });
 
       if (!response.ok) {
         throw new Error('下載失敗');
@@ -390,7 +396,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = file.name;
+      a.download = file.name; // 使用原始檔名
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

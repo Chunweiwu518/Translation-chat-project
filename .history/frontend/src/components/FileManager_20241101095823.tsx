@@ -366,44 +366,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
     };
   }, []);
 
-  // 修改下載檔案的處理函數
-  const handleDownloadFile = async (file: FileInfo) => {
-    try {
-      // 構建完整的檔案路徑
-      const filePath = currentPath === '/' 
-        ? file.name 
-        : `${currentPath}/${file.name}`;
-      
-      console.log('準備下載檔案:', filePath);
-      
-      // 使用 GET 請求而不是 POST
-      const response = await fetch(`http://localhost:5000/api/files/download/${encodeURIComponent(filePath)}`);
-
-      if (!response.ok) {
-        throw new Error('下載失敗');
-      }
-
-      // 取得 blob 數據
-      const blob = await response.blob();
-      
-      // 創建下載連結
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      
-      closeContextMenu();
-      showNotification('檔案下載成功', 'success');
-    } catch (error) {
-      console.error('下載檔案失敗:', error);
-      showNotification('下載檔案失敗', 'error');
-    }
-  };
-
   return (
     <div className="h-full flex flex-col relative" onContextMenu={(e) => handleContextMenu(e, 'background')}>
       {/* 頂部工具列 */}
@@ -564,19 +526,43 @@ export const FileManager: React.FC<FileManagerProps> = ({
                 <MessageSquare className="w-5 h-5 mr-3" />
                 <span className="flex-1">開始檔案對話 ({selectedFiles.length} 個檔案)</span>
               </button>
-              {contextMenu?.type === 'file' && contextMenu.target && (
-                <button
-                  className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
-                  onClick={() => {
-                    if (contextMenu.target) {
-                      handleDownloadFile(contextMenu.target);
+              <button
+                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
+                onClick={async () => {
+                  try {
+                    if (!contextMenu.target) return;
+                    
+                    // 構建完整的檔案路徑
+                    const filePath = contextMenu.target.path;
+                    console.log('準備下載檔案:', filePath); // 添加調試信息
+                    
+                    const response = await fetch(`http://localhost:5000/api/files/download/${encodeURIComponent(filePath)}`);
+                    if (!response.ok) {
+                      throw new Error(`下載失敗: ${response.status}`);
                     }
-                  }}
-                >
-                  <Download className="w-5 h-5 mr-3" />
-                  <span className="flex-1">下載檔案</span>
-                </button>
-              )}
+                    
+                    // 創建 blob 並下載
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = contextMenu.target.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    closeContextMenu();
+                    showNotification('檔案下載成功', 'success');
+                  } catch (error) {
+                    console.error('下載檔案失敗:', error);
+                    showNotification('下載檔案失敗', 'error');
+                  }
+                }}
+              >
+                <Download className="w-5 h-5 mr-3" />
+                <span className="flex-1">下載檔案</span>
+              </button>
               <div className="border-t my-1"></div>
               <button
                 className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center text-red-500"

@@ -65,10 +65,6 @@ class FileInfo(BaseModel):
     tags: List[str] = []
 
 
-class DownloadRequest(BaseModel):
-    file_path: str
-
-
 def safely_delete_directory(path: Path):
     """安全地刪除目錄，包括等待和重試機制"""
     max_attempts = 3
@@ -1025,7 +1021,7 @@ async def get_translated_file_content(file_path: str):
         if not os.path.exists(safe_path):
             raise HTTPException(status_code=404, detail="檔案不存在")
 
-        # 讀翻譯後的內容
+        # 讀取翻譯後的內容
         with open(safe_path, "r", encoding="utf-8") as f:
             content = f.read()
 
@@ -1038,41 +1034,36 @@ async def get_translated_file_content(file_path: str):
 async def download_file(file_path: str):
     """下載檔案"""
     try:
-        # 處理檔案路徑
+        # 確保路徑安全
         file_path = file_path.replace("\\", "/").lstrip("/")
         full_path = Path(Config.UPLOAD_FOLDER) / file_path
 
-        print(f"請求下載檔案: {file_path}")
-        print(f"完整路徑: {full_path}")
+        print(f"嘗試下載檔案: {full_path}")  # 添加調試信息
 
-        # 檢查檔案是否存在
         if not full_path.exists():
-            print(f"檔案不存在: {full_path}")
+            print(f"檔案不存在: {full_path}")  # 添加調試信息
             raise HTTPException(status_code=404, detail="檔案不存在")
 
-        # 檢查是否為檔案
         if not full_path.is_file():
-            print(f"不是檔案: {full_path}")
+            print(f"不是檔案: {full_path}")  # 添加調試信息
             raise HTTPException(status_code=400, detail="不是有效的檔案")
 
         # 檢查檔案是否在允許的目錄中
-        upload_folder = Path(Config.UPLOAD_FOLDER).resolve()
-        file_path_resolved = full_path.resolve()
-
-        if not str(file_path_resolved).startswith(str(upload_folder)):
-            print(f"無效的檔案路徑: {file_path_resolved}")
+        if not str(full_path.resolve()).startswith(
+            str(Path(Config.UPLOAD_FOLDER).resolve())
+        ):
             raise HTTPException(status_code=403, detail="無效的檔案路徑")
 
-        print(f"開始下載檔案: {full_path}")
+        print(f"準備下載檔案: {full_path}")  # 添加調試信息
 
         return FileResponse(
-            path=str(full_path),
+            path=str(full_path),  # 確保轉換為字符串
             filename=full_path.name,
             media_type="application/octet-stream",
         )
 
     except Exception as e:
-        print(f"下載檔案時出錯: {str(e)}")
+        print(f"下載檔案時出錯: {str(e)}")  # 添加調試信息
         raise HTTPException(status_code=500, detail=str(e))
 
 

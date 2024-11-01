@@ -1034,12 +1034,12 @@ async def get_translated_file_content(file_path: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/files/download/{file_path:path}")
-async def download_file(file_path: str):
+@app.post("/api/files/download")
+async def download_file(request: DownloadRequest):
     """下載檔案"""
     try:
         # 處理檔案路徑
-        file_path = file_path.replace("\\", "/").lstrip("/")
+        file_path = request.file_path.replace("\\", "/").lstrip("/")
         full_path = Path(Config.UPLOAD_FOLDER) / file_path
 
         print(f"請求下載檔案: {file_path}")
@@ -1065,6 +1065,7 @@ async def download_file(file_path: str):
 
         print(f"開始下載檔案: {full_path}")
 
+        # 返回檔案
         return FileResponse(
             path=str(full_path),
             filename=full_path.name,

@@ -12,7 +12,6 @@ from config import Config
 from docx import Document
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.websockets import WebSocket
 from langchain.document_loaders import PyPDFLoader  # 添加這行
 from pydantic import BaseModel
@@ -63,10 +62,6 @@ class FileInfo(BaseModel):
     created_at: str
     category: Optional[str] = None
     tags: List[str] = []
-
-
-class DownloadRequest(BaseModel):
-    file_path: str
 
 
 def safely_delete_directory(path: Path):
@@ -831,7 +826,7 @@ async def get_file_content(file_path: str):
             if not content:
                 raise ValueError("檔案內容為空")
 
-            print(f"成功讀取檔案，內容度: {len(content)}")
+            print(f"成功讀取檔案，內容長度: {len(content)}")
             return {"content": content, "filename": full_path.name}
 
         except Exception as e:
@@ -1025,54 +1020,12 @@ async def get_translated_file_content(file_path: str):
         if not os.path.exists(safe_path):
             raise HTTPException(status_code=404, detail="檔案不存在")
 
-        # 讀翻譯後的內容
+        # 讀取翻譯後的內容
         with open(safe_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         return {"content": content}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/files/download/{file_path:path}")
-async def download_file(file_path: str):
-    """下載檔案"""
-    try:
-        # 處理檔案路徑
-        file_path = file_path.replace("\\", "/").lstrip("/")
-        full_path = Path(Config.UPLOAD_FOLDER) / file_path
-
-        print(f"請求下載檔案: {file_path}")
-        print(f"完整路徑: {full_path}")
-
-        # 檢查檔案是否存在
-        if not full_path.exists():
-            print(f"檔案不存在: {full_path}")
-            raise HTTPException(status_code=404, detail="檔案不存在")
-
-        # 檢查是否為檔案
-        if not full_path.is_file():
-            print(f"不是檔案: {full_path}")
-            raise HTTPException(status_code=400, detail="不是有效的檔案")
-
-        # 檢查檔案是否在允許的目錄中
-        upload_folder = Path(Config.UPLOAD_FOLDER).resolve()
-        file_path_resolved = full_path.resolve()
-
-        if not str(file_path_resolved).startswith(str(upload_folder)):
-            print(f"無效的檔案路徑: {file_path_resolved}")
-            raise HTTPException(status_code=403, detail="無效的檔案路徑")
-
-        print(f"開始下載檔案: {full_path}")
-
-        return FileResponse(
-            path=str(full_path),
-            filename=full_path.name,
-            media_type="application/octet-stream",
-        )
-
-    except Exception as e:
-        print(f"下載檔案時出錯: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
