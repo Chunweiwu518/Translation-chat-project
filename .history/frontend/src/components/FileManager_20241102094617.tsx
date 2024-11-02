@@ -405,7 +405,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
       window.URL.revokeObjectURL(url);
       
       closeContextMenu();
-      showNotification('���案下載成功', 'success');
+      showNotification('檔案下載成功', 'success');
     } catch (error) {
       console.error('下載檔案失敗:', error);
       showNotification('下載檔案失敗', 'error');
@@ -510,38 +510,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
     }
   };
 
-  // 添加批次刪除功能
-  const handleBatchDelete = async () => {
-    if (!window.confirm(`確定要刪除選中的 ${selectedFiles.length} 個檔案嗎？`)) {
-      return;
-    }
-    
-    try {
-      await Promise.all(selectedFiles.map(fileId => handleDeleteFile(fileId)));
-      setSelectedFiles([]);
-      showNotification('批次刪除成功', 'success');
-    } catch (error) {
-      console.error('批次刪除失敗:', error);
-      showNotification('批次刪除失敗', 'error');
-    }
-  };
-
-  // 添加批次下載功能
-  const handleBatchDownload = async () => {
-    try {
-      await Promise.all(selectedFiles.map(fileId => {
-        const file = files.find(f => f.id === fileId);
-        if (file && !file.isDirectory) {
-          return handleDownloadFile(file);
-        }
-      }));
-      showNotification('批次下載成功', 'success');
-    } catch (error) {
-      console.error('批次下載失敗:', error);
-      showNotification('批次下載失敗', 'error');
-    }
-  };
-
   return (
     <div className="h-full flex flex-col relative" onContextMenu={(e) => handleContextMenu(e, 'background')}>
       {/* 頂部工具列 */}
@@ -588,20 +556,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
           {/* 批次操作按鈕 */}
           {selectedFiles.length > 0 && (
             <>
-              <button
-                onClick={handleBatchDownload}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                下載所選 ({selectedFiles.length})
-              </button>
-              <button
-                onClick={handleBatchDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                刪除所選 ({selectedFiles.length})
-              </button>
               <button
                 onClick={() => {
                   setCurrentAction('translate');
