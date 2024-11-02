@@ -40,8 +40,6 @@ interface FileManagerProps {
   ) => Promise<void>;
   onModeChange: (mode: 'chat' | 'file') => void;
   onFileChat: (files: string[]) => void;
-  files: FileInfo[];
-  onFilesChange: (files: FileInfo[]) => void;
 }
 
 export const FileManager: React.FC<FileManagerProps> = ({
@@ -49,10 +47,9 @@ export const FileManager: React.FC<FileManagerProps> = ({
   onBatchTranslateAndEmbed,
   onBatchEmbed,
   onModeChange,
-  onFileChat,
-  files,
-  onFilesChange
+  onFileChat
 }) => {
+  const [files, setFiles] = useState<FileInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPath, setCurrentPath] = useState('/');
@@ -100,7 +97,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
       const response = await fetch(`http://localhost:5000/api/files?${params}`);
       if (response.ok) {
         const data = await response.json();
-        onFilesChange(data);
+        setFiles(data);
       }
     } catch (error) {
       console.error('獲取檔案列表失敗:', error);
@@ -236,31 +233,15 @@ export const FileManager: React.FC<FileManagerProps> = ({
     setProgress(0);
     
     try {
-      // 檢查是否為資料夾處理
-      const isFolder = contextMenu?.type === 'folder';
-      let filesToProcess = selectedFiles;
-
-      // 如果是資料夾，獲取資料夾內所有檔案
-      if (isFolder && contextMenu?.target) {
-        const response = await fetch(`http://localhost:5000/api/files?path=${encodeURIComponent(contextMenu.target.path)}`);
-        if (!response.ok) {
-          throw new Error('無法獲取資料夾內容');
-        }
-        const folderContents = await response.json();
-        filesToProcess = folderContents
-          .filter((item: FileInfo) => !item.isDirectory)
-          .map((item: FileInfo) => item.id);
-      }
-
       if (action === 'translate') {
         await onBatchTranslateAndEmbed(
-          filesToProcess,
+          selectedFiles, 
           selectedKnowledgeBase,
           setProgress
         );
       } else {
         await onBatchEmbed(
-          filesToProcess,
+          selectedFiles, 
           selectedKnowledgeBase,
           setProgress
         );
@@ -292,7 +273,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     });
   }, []);
 
-  // 關閉右選單
+  // 關閉右鍵選單
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
@@ -879,35 +860,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
               <button
                 className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
                 onClick={() => {
-                  if (contextMenu.target) {
-                    setSelectedFiles([contextMenu.target.id]);
-                    setCurrentAction('translate');  // 設置為翻譯模式
-                    setShowActionModal(true);
-                  }
-                  closeContextMenu();
-                }}
-              >
-                <Languages className="w-5 h-5 mr-3" />
-                <span className="flex-1">翻譯後加入知識庫</span>
-              </button>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
-                onClick={() => {
-                  if (contextMenu.target) {
-                    setSelectedFiles([contextMenu.target.id]);
-                    setCurrentAction('direct');  // 設置為直接加入模式
-                    setShowActionModal(true);
-                  }
-                  closeContextMenu();
-                }}
-              >
-                <Database className="w-5 h-5 mr-3" />
-                <span className="flex-1">直接加入知識庫</span>
-              </button>
-              <div className="border-t my-1"></div>
-              <button
-                className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
-                onClick={() => {
                   const fileInput = document.createElement('input');
                   fileInput.type = 'file';
                   fileInput.multiple = true;
@@ -918,6 +870,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
                       Array.from(files).forEach(file => {
                         formData.append('files', file);
                       });
+                      // 使用資料夾的路徑
                       formData.append('path', contextMenu.target!.path);
 
                       try {
@@ -952,6 +905,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
                   if (window.confirm('確定要刪除此資料夾及其所有內容嗎？此操作無法恢復。')) {
                     handleDeleteFolder(contextMenu.target!.path);
                     closeContextMenu();
+                    showNotification('資料夾刪除成功', 'success');
                   }
                 }}
               >

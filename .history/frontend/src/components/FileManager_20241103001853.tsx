@@ -228,7 +228,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     });
   };
 
-  // 修改處理批次操作的函數
+  // 修��處理批次操作的函數
   const handleBatchAction = async (action: 'translate' | 'direct') => {
     if (!selectedKnowledgeBase || selectedFiles.length === 0) return;
 
@@ -236,31 +236,15 @@ export const FileManager: React.FC<FileManagerProps> = ({
     setProgress(0);
     
     try {
-      // 檢查是否為資料夾處理
-      const isFolder = contextMenu?.type === 'folder';
-      let filesToProcess = selectedFiles;
-
-      // 如果是資料夾，獲取資料夾內所有檔案
-      if (isFolder && contextMenu?.target) {
-        const response = await fetch(`http://localhost:5000/api/files?path=${encodeURIComponent(contextMenu.target.path)}`);
-        if (!response.ok) {
-          throw new Error('無法獲取資料夾內容');
-        }
-        const folderContents = await response.json();
-        filesToProcess = folderContents
-          .filter((item: FileInfo) => !item.isDirectory)
-          .map((item: FileInfo) => item.id);
-      }
-
       if (action === 'translate') {
         await onBatchTranslateAndEmbed(
-          filesToProcess,
+          selectedFiles, 
           selectedKnowledgeBase,
           setProgress
         );
       } else {
         await onBatchEmbed(
-          filesToProcess,
+          selectedFiles, 
           selectedKnowledgeBase,
           setProgress
         );
@@ -292,7 +276,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     });
   }, []);
 
-  // 關閉右選單
+  // 關閉右���選單
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
@@ -881,10 +865,10 @@ export const FileManager: React.FC<FileManagerProps> = ({
                 onClick={() => {
                   if (contextMenu.target) {
                     setSelectedFiles([contextMenu.target.id]);
-                    setCurrentAction('translate');  // 設置為翻譯模式
+                    setCurrentAction('translate');
                     setShowActionModal(true);
+                    closeContextMenu();
                   }
-                  closeContextMenu();
                 }}
               >
                 <Languages className="w-5 h-5 mr-3" />
@@ -895,10 +879,10 @@ export const FileManager: React.FC<FileManagerProps> = ({
                 onClick={() => {
                   if (contextMenu.target) {
                     setSelectedFiles([contextMenu.target.id]);
-                    setCurrentAction('direct');  // 設置為直接加入模式
+                    setCurrentAction('direct');
                     setShowActionModal(true);
+                    closeContextMenu();
                   }
-                  closeContextMenu();
                 }}
               >
                 <Database className="w-5 h-5 mr-3" />

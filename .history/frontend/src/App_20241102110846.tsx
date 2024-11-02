@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { FileUpload } from "./components/FileUpload";
 import { Chat } from "./components/Chat";
@@ -428,27 +428,6 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  // 添加 files 狀態
-  const [files, setFiles] = useState<FileInfo[]>([]);
-
-  // 添加獲取檔案列表的函數
-  const fetchFiles = async () => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/files?path=/`);
-      if (response.ok) {
-        const data = await response.json();
-        setFiles(data);
-      }
-    } catch (error) {
-      console.error('獲取檔案列表失敗:', error);
-    }
-  };
-
-  // 在 useEffect 中獲取檔案列表
-  useEffect(() => {
-    fetchFiles();
-  }, []);
-
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar
@@ -470,8 +449,6 @@ const App: React.FC = () => {
             onBatchEmbed={handleBatchEmbed}
             onModeChange={setCurrentMode}
             onFileChat={handleFileChat}
-            files={files}  // 傳遞檔案列表
-            onFilesChange={setFiles}  // 傳遞更新檔案列表的函數
           />
         ) : currentMode === "knowledge-base" ? (
           <KnowledgeBaseManager
