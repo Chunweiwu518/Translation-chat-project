@@ -99,4 +99,13 @@ export interface ChatModeProps {
   knowledgeBase: KnowledgeBaseHook;
   modelSettings: ModelSettings;
   onSettingsChange: (settings: ModelSettings) => void;
+}
+
+export interface FileInfo {
+  id: string;
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  size?: number;
+  lastModified?: string;
 } 

@@ -17,7 +17,7 @@ const TranslateMode: React.FC<TranslateModeProps> = ({ fileProcessing, knowledge
   <div className="max-w-4xl mx-auto">
     <div className="p-6 bg-white rounded-lg shadow-sm">
       <div className="text-center">
-        <h2 className="text-2xl font-bold mb-4">上傳檔案</h2>
+        <h2 className="text-2xl font-bold mb-4">傳檔案</h2>
         <p className="text-gray-500 mb-8">拖拽檔案到此處或點擊上傳</p>
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-12">
           <input
@@ -162,7 +162,7 @@ const App: React.FC = () => {
 
   // 修改批次翻譯並加入知識庫函數
   const handleBatchTranslateAndEmbed = async (
-    files: string[], 
+    files: string[],
     knowledgeBaseId: string,
     onProgress: (progress: number) => void
   ): Promise<void> => {
@@ -214,6 +214,22 @@ const App: React.FC = () => {
 
         const data = await translateResponse.json();
         
+        // 保存原始文件到原始目錄
+        const originalFormData = new FormData();
+        const originalBlob = new Blob([originalContent], { type: 'text/plain' });
+        originalFormData.append('files', originalBlob, fileName);
+        originalFormData.append('path', directoryPath || '/');  // 使用檔案的原始目錄路徑
+
+        // 上傳原始文件
+        const uploadOriginalResponse = await fetch('http://localhost:5000/api/files/upload', {
+          method: 'POST',
+          body: originalFormData,
+        });
+
+        if (!uploadOriginalResponse.ok) {
+          throw new Error('保存原始文件失敗');
+        }
+
         // 加入知識庫
         const embedResponse = await fetch('http://localhost:5000/api/embed', {
           method: 'POST',
@@ -258,12 +274,14 @@ const App: React.FC = () => {
 
   // 修改批次直接加入知識庫函數
   const handleBatchEmbed = async (
-    files: string[], 
+    files: string[],
     knowledgeBaseId: string,
     onProgress: (progress: number) => void
   ): Promise<void> => {
     try {
-      // 依序處理每個檔案
+      const totalFiles = files.length;
+      let currentFileIndex = 0;
+
       for (const file_path of files) {
         // 獲取檔案內容
         const fileResponse = await fetch(`http://localhost:5000/api/files/content/${file_path}`);
@@ -286,6 +304,9 @@ const App: React.FC = () => {
         if (!embedResponse.ok) {
           throw new Error(`檔案 ${file_path} 加入知識庫失敗`);
         }
+
+        currentFileIndex++;
+        onProgress(Math.round((currentFileIndex / totalFiles) * 100));
       }
     } catch (error) {
       console.error('處理檔案時出錯:', error);
@@ -339,7 +360,7 @@ const App: React.FC = () => {
       console.error('處理檔案對話時錯:', error);
       const errorMessage: Message = {
         sender: "system",
-        text: `處理檔案時出錯: ${error instanceof Error ? error.message : '未知錯誤'}`,
+        text: `理檔案時出錯: ${error instanceof Error ? error.message : '未知錯誤'}`,
       };
       chat.setMessages([errorMessage]);
     }
@@ -360,6 +381,45 @@ const App: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const [translatedFiles, setTranslatedFiles] = useState<TranslatedFile[]>([]);
+
+  const handleDeleteTranslations = async (ids: string | string[]) => {
+    const idsArray = Array.isArray(ids) ? ids : [ids];
+    
+    try {
+      await Promise.all(
+        idsArray.map(id =>
+          fetch(`/api/translations/${id}`, {
+            method: 'DELETE'
+          })
+        )
+      );
+      
+      setTranslatedFiles(prev => 
+        prev.filter(file => !idsArray.includes(file.id))
+      );
+    } catch (error) {
+      console.error('刪除翻譯文件失敗:', error);
+    }
+  };
+
+  const handleDownloadTranslations = (files: TranslatedFile | TranslatedFile[]) => {
+    const filesArray = Array.isArray(files) ? files : [files];
+    
+    filesArray.forEach(file => {
+      const content = `原文：\n\n${file.originalContent}\n\n翻譯：\n\n${file.translatedContent}`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${file.name}_翻譯結果.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
   };
 
   return (
@@ -403,8 +463,8 @@ const App: React.FC = () => {
         ) : currentMode === "translated-files" ? (
           <TranslatedFilesView
             files={fileProcessing.translatedFiles}
-            onDelete={fileProcessing.handleDelete}  // 直接使用 hook 提供的 handleDelete
-            onDownload={handleDownloadTranslation}
+            onDelete={handleDeleteTranslations}
+            onDownload={handleDownloadTranslations}
           />
         ) : null}
       </div>

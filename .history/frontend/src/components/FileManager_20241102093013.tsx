@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Loader, 
   Trash2, 
@@ -11,18 +11,11 @@ import {
   File as FileIcon,
   ChevronLeft,
   MessageSquare,
-  Download
+  Download,
+  Square,
+  CheckSquare
 } from 'lucide-react';
-
-interface FileInfo {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  created_at: string;
-  path: string;
-  isDirectory: boolean;
-}
+import { FileInfo } from '../types';
 
 interface FileManagerProps {
   knowledgeBases: Array<{ id: string; name: string }>;
@@ -36,7 +29,7 @@ interface FileManagerProps {
     knowledgeBaseId: string,
     onProgress: (progress: number) => void
   ) => Promise<void>;
-  onModeChange: (mode: 'chat' | 'file') => void;
+  onModeChange: (mode: string) => void;
   onFileChat: (files: string[]) => void;
 }
 
@@ -55,7 +48,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [showActionModal, setShowActionModal] = useState(false);
-  const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState('');
+  const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<string>('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -65,7 +58,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
   } | null>(null);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [currentAction, setCurrentAction] = useState<'translate' | 'direct'>('direct');
+  const [currentAction, setCurrentAction] = useState<'translate' | 'embed' | 'chat' | 'direct'>('translate');
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -73,14 +66,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
   }>({ show: false, message: '', type: 'success' });
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectionBox, setSelectionBox] = useState<{
-    startX: number;
-    startY: number;
-    currentX: number;
-    currentY: number;
-    isSelecting: boolean;
-  } | null>(null);
-  const fileListRef = useRef<HTMLDivElement>(null);
 
   // 獲取檔案列表
   const fetchFiles = async () => {
@@ -183,7 +168,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
       
       if (response.ok) {
         fetchFiles();
-        showNotification('檔案上傳成功', 'success');
+        showNotification('檔案上傳功', 'success');
       }
     } catch (error) {
       console.error('檔案上傳失敗:', error);
@@ -227,35 +212,46 @@ export const FileManager: React.FC<FileManagerProps> = ({
   };
 
   // 修改處理批次操作的函數
-  const handleBatchAction = async (action: 'translate' | 'direct') => {
-    if (!selectedKnowledgeBase || selectedFiles.length === 0) return;
+  const handleBatchAction = async (action: 'translate' | 'embed' | 'chat' | 'direct') => {
+    if (selectedFiles.length === 0) {
+      alert('請先選擇檔案');
+      return;
+    }
+
+    if ((action === 'translate' || action === 'embed' || action === 'direct') && !selectedKnowledgeBase) {
+      alert('請選擇知識庫');
+      return;
+    }
 
     setProcessing(true);
-    setProgress(0);
-    
     try {
-      if (action === 'translate') {
-        await onBatchTranslateAndEmbed(
-          selectedFiles, 
-          selectedKnowledgeBase,
-          setProgress
-        );
-      } else {
-        await onBatchEmbed(
-          selectedFiles, 
-          selectedKnowledgeBase,
-          setProgress
-        );
+      switch (action) {
+        case 'translate':
+          await onBatchTranslateAndEmbed(
+            selectedFiles,
+            selectedKnowledgeBase,
+            setProgress
+          );
+          break;
+        case 'embed':
+        case 'direct':
+          await onBatchEmbed(
+            selectedFiles,
+            selectedKnowledgeBase,
+            setProgress
+          );
+          break;
+        case 'chat':
+          onFileChat(selectedFiles);
+          break;
       }
       setSelectedFiles([]);
-      setShowActionModal(false);
-      showNotification('處理完成！', 'success');
+      setProgress(0);
     } catch (error) {
       console.error('批次處理失敗:', error);
-      showNotification('處理失敗，請稍後重試', 'error');
+      alert('批次處理失敗');
     } finally {
       setProcessing(false);
-      setProgress(0);
     }
   };
 
@@ -279,7 +275,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     setContextMenu(null);
   }, []);
 
-  // 點擊其他地方時關閉選單
+  // 點擊地方時關閉選單
   useEffect(() => {
     const handleClick = () => closeContextMenu();
     document.addEventListener('click', handleClick);
@@ -407,98 +403,27 @@ export const FileManager: React.FC<FileManagerProps> = ({
       closeContextMenu();
       showNotification('檔案下載成功', 'success');
     } catch (error) {
-      console.error('下載檔案失敗:', error);
+      console.error('載檔案失敗:', error);
       showNotification('下載檔案失敗', 'error');
     }
   };
 
-  // 處理滑鼠按下事件
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // 只處理左鍵點擊
-    if (e.button !== 0) return;
-    
-    // 如果點擊的是檔案或資料夾,不啟動框選
-    if ((e.target as HTMLElement).closest('.file-item')) return;
-
-    const container = fileListRef.current;
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setSelectionBox({
-      startX: x,
-      startY: y,
-      currentX: x,
-      currentY: y,
-      isSelecting: true
-    });
+  // 處理全選/取消全選
+  const handleSelectAll = () => {
+    if (selectedFiles.length === files.length) {
+      setSelectedFiles([]);
+    } else {
+      setSelectedFiles(files.map(file => file.id));
+    }
   };
 
-  // 處理滑鼠移動事件
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!selectionBox?.isSelecting) return;
-
-    const container = fileListRef.current;
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    setSelectionBox(prev => ({
-      ...prev!,
-      currentX: e.clientX - rect.left,
-      currentY: e.clientY - rect.top
-    }));
-
-    // 計算框選區域
-    const selectionRect = getSelectionRect();
-    
-    // 檢查每個檔案是否在框選區域內
-    files.forEach(file => {
-      const fileElement = document.getElementById(`file-${file.id}`);
-      if (fileElement) {
-        const fileRect = fileElement.getBoundingClientRect();
-        const isIntersecting = isRectIntersecting(selectionRect, {
-          left: fileRect.left - rect.left,
-          top: fileRect.top - rect.top,
-          right: fileRect.right - rect.left,
-          bottom: fileRect.bottom - rect.top
-        });
-
-        if (isIntersecting) {
-          if (!selectedFiles.includes(file.id)) {
-            setSelectedFiles(prev => [...prev, file.id]);
-          }
-        } else if (!isCtrlPressed) {
-          setSelectedFiles(prev => prev.filter(id => id !== file.id));
-        }
-      }
-    });
-  };
-
-  // 處理滑鼠放開事件
-  const handleMouseUp = () => {
-    setSelectionBox(null);
-  };
-
-  // 計算框選區域
-  const getSelectionRect = () => {
-    if (!selectionBox) return null;
-
-    const left = Math.min(selectionBox.startX, selectionBox.currentX);
-    const top = Math.min(selectionBox.startY, selectionBox.currentY);
-    const right = Math.max(selectionBox.startX, selectionBox.currentX);
-    const bottom = Math.max(selectionBox.startY, selectionBox.currentY);
-
-    return { left, top, right, bottom };
-  };
-
-  // 檢查兩個矩形是否相交
-  const isRectIntersecting = (rect1: any, rect2: any) => {
-    return !(rect2.left > rect1.right || 
-            rect2.right < rect1.left || 
-            rect2.top > rect1.bottom ||
-            rect2.bottom < rect1.top);
+  // 處理單個檔案選擇
+  const handleSelectFile = (fileId: string) => {
+    setSelectedFiles(prev =>
+      prev.includes(fileId)
+        ? prev.filter(id => id !== fileId)
+        : [...prev, fileId]
+    );
   };
 
   return (
@@ -506,7 +431,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
       {/* 頂部工具列 */}
       <div className="p-4 border-b flex justify-between items-center">
         <div className="flex items-center space-x-4">
-          {/* 添加返回按鈕 */}
+          {/* 返回按鈕 */}
           {currentPath !== '/' && (
             <button
               onClick={handleGoBack}
@@ -518,7 +443,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
             </button>
           )}
           <h2 className="text-xl font-bold">檔案管理</h2>
-          {/* 顯示當前路徑 */}
           <span className="text-sm text-gray-500">
             {currentPath === '/' ? '根目錄' : currentPath}
           </span>
@@ -533,7 +457,49 @@ export const FileManager: React.FC<FileManagerProps> = ({
             />
           </div>
         </div>
-        <div className="flex space-x-4">
+
+        {/* 右側工具列 - 移動全選和批次操作按鈕到這裡 */}
+        <div className="flex items-center space-x-4">
+          {/* 只要有檔案就顯示全選按鈕，不管在哪個目錄 */}
+          {files.filter(f => !f.isDirectory).length > 0 && (
+            <>
+              <button
+                onClick={handleSelectAll}
+                className="flex items-center text-sm text-gray-600 hover:text-gray-900"
+              >
+                {selectedFiles.length === files.filter(f => !f.isDirectory).length ? (
+                  <CheckSquare className="w-4 h-4 mr-2" />
+                ) : (
+                  <Square className="w-4 h-4 mr-2" />
+                )}
+                {selectedFiles.length === files.filter(f => !f.isDirectory).length ? '取消全選' : '全選'}
+              </button>
+              
+              {selectedFiles.length > 0 && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleBatchAction('translate')}
+                    className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    批次翻譯 ({selectedFiles.length})
+                  </button>
+                  <button
+                    onClick={() => handleBatchAction('embed')}
+                    className="px-3 py-1.5 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                  >
+                    批次嵌入 ({selectedFiles.length})
+                  </button>
+                  <button
+                    onClick={() => handleBatchAction('chat')}
+                    className="px-3 py-1.5 text-sm bg-purple-500 text-white rounded hover:bg-purple-600"
+                  >
+                    開始對話 ({selectedFiles.length})
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+          
           <button
             onClick={() => setShowNewFolderModal(true)}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200"
@@ -554,22 +520,14 @@ export const FileManager: React.FC<FileManagerProps> = ({
         </div>
       </div>
 
-      {/* 檔案列表 */}
-      <div 
-        ref={fileListRef}
-        className="flex-1 overflow-auto p-4 relative"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-      >
+      {/* 檔案列表區域 */}
+      <div className="flex-1 overflow-auto p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {/* 資料夾列表 */}
           {files.filter(f => f.isDirectory).map(folder => (
             <div
-              id={`file-${folder.id}`}
               key={folder.id}
-              className="file-item group relative p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+              className="group relative p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
               onClick={(e) => {
                 // 如果是右鍵點擊，不執行資料夾切換
                 if (e.button === 2) {
@@ -594,9 +552,8 @@ export const FileManager: React.FC<FileManagerProps> = ({
           {/* 檔案列表 */}
           {files.filter(f => !f.isDirectory).map(file => (
             <div
-              id={`file-${file.id}`}
               key={file.id}
-              className={`file-item group relative p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer
+              className={`group relative p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer
                 ${selectedFiles.includes(file.id) ? 'bg-blue-50 border-blue-200' : ''}`}
               onClick={(e) => handleSelect(file, e)}
               onContextMenu={(e) => {
@@ -609,7 +566,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
                 <FileIcon className="w-12 h-12 text-gray-500 mb-2" />
                 <span className="text-center truncate w-full">{file.name}</span>
                 <span className="text-xs text-gray-500">
-                  {(file.size / 1024).toFixed(2)} KB
+                  {file.size ? `${(file.size / 1024).toFixed(2)} KB` : '未知大小'}
                 </span>
               </div>
               <input
@@ -622,19 +579,6 @@ export const FileManager: React.FC<FileManagerProps> = ({
             </div>
           ))}
         </div>
-
-        {/* 框選區域 */}
-        {selectionBox && (
-          <div
-            className="absolute border-2 border-blue-500 bg-blue-100 bg-opacity-20 pointer-events-none"
-            style={{
-              left: `${Math.min(selectionBox.startX, selectionBox.currentX)}px`,
-              top: `${Math.min(selectionBox.startY, selectionBox.currentY)}px`,
-              width: `${Math.abs(selectionBox.currentX - selectionBox.startX)}px`,
-              height: `${Math.abs(selectionBox.currentY - selectionBox.startY)}px`
-            }}
-          />
-        )}
       </div>
 
       {/* 右鍵選單 */}
@@ -664,7 +608,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
               <button
                 className="w-full px-6 py-2.5 text-left hover:bg-gray-100 flex items-center"
                 onClick={() => {
-                  setCurrentAction('direct');
+                  setCurrentAction('embed');
                   setShowActionModal(true);
                   closeContextMenu();
                 }}
@@ -904,11 +848,12 @@ export const FileManager: React.FC<FileManagerProps> = ({
                 取消
               </button>
               <button
-                onClick={() => handleBatchAction(currentAction)}
+                onClick={() => handleBatchAction(currentAction as 'translate' | 'embed' | 'chat' | 'direct')}
                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                 disabled={!selectedKnowledgeBase || processing}
               >
-                確認加入
+                {currentAction === 'translate' ? '開始翻譯' : 
+                 currentAction === 'embed' ? '開始嵌入' : '開始對話'}
               </button>
             </div>
           </div>
