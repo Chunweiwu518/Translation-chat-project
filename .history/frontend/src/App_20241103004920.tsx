@@ -128,7 +128,7 @@ const ChatMode: React.FC<ChatModeProps> = ({
               }
             }
           } catch (error) {
-            console.error("處理文件時出錯:", error);
+            console.error("處理文件時出:", error);
             const errorMessage: Message = {
               sender: "system",
               text: `處理文件 "${file.name}" 時出錯。請稍後重試。`,
@@ -202,66 +202,45 @@ const App: React.FC = () => {
 
       for (const filePath of allFiles) {
         try {
-          // 獲取檔案的目錄路徑
           const pathParts = filePath.split('/');
-          const fileName = pathParts.pop() || ''; // 取得檔案名
+          const fileName = pathParts.pop() || '';
           const directoryPath = pathParts.join('/');
 
-          // 更新進度 - 開始處理新檔案
           const baseProgress = (currentFileIndex / totalFiles) * 100;
           onProgress(Math.round(baseProgress));
 
-          // 檢查檔案是否已經存在於 translatedFiles 中
-          const existingFile = fileProcessing.translatedFiles.find(
-            f => f.name === fileName && f.status === 'completed'
+          // 從檔案系統讀取檔案內容
+          const fileResponse = await fetch(`http://localhost:5000/api/files/content/${filePath}`);
+          if (!fileResponse.ok) {
+            throw new Error(`無法讀取檔案 ${filePath}`);
+          }
+          const { content } = await fileResponse.json();
+          const originalContent = content;
+
+          onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.3));
+
+          // 翻譯處理
+          const formData = new FormData();
+          const blob = new Blob([originalContent], { type: 'text/plain' });
+          formData.append('file', blob, fileName);
+
+          const translateResponse = await fetch(
+            'http://localhost:5000/api/upload_and_translate',
+            {
+              method: 'POST',
+              body: formData,
+            }
           );
 
-          let translatedContent: string;
-          let originalContent: string;
-
-          if (existingFile) {
-            // 如果檔案已經翻譯過，直接使用現有的翻譯
-            translatedContent = existingFile.translatedContent;
-            originalContent = existingFile.originalContent;
-            
-            // 更新進度以反映跳過翻譯步驟
-            onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.6));
-          } else {
-            // 從檔案系統讀取檔案內容
-            const fileResponse = await fetch(`http://localhost:5000/api/files/content/${filePath}`);
-            if (!fileResponse.ok) {
-              throw new Error(`無法讀取檔案 ${filePath}`);
-            }
-            const { content } = await fileResponse.json();
-            originalContent = content;
-
-            // 更新進度 - 開始翻譯
-            onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.3));
-
-            // 翻譯處理
-            const formData = new FormData();
-            const blob = new Blob([originalContent], { type: 'text/plain' });
-            formData.append('file', blob, fileName);
-
-            const translateResponse = await fetch(
-              'http://localhost:5000/api/upload_and_translate',
-              {
-                method: 'POST',
-                body: formData,
-              }
-            );
-
-            if (!translateResponse.ok) {
-              const errorData = await translateResponse.json();
-              throw new Error(`翻譯失敗: ${errorData.detail || '未知錯誤'}`);
-            }
-
-            const data = await translateResponse.json();
-            translatedContent = data.translated_content;
-            
-            // 更新進度 - 翻譯完成
-            onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.6));
+          if (!translateResponse.ok) {
+            const errorData = await translateResponse.json();
+            throw new Error(`翻譯失敗: ${errorData.detail || '未知錯誤'}`);
           }
+
+          const data = await translateResponse.json();
+          const translatedContent = data.translated_content;
+          
+          onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.6));
 
           // 加入知識庫
           const embedResponse = await fetch('http://localhost:5000/api/embed', {
@@ -278,33 +257,46 @@ const App: React.FC = () => {
             throw new Error('加入知識庫失敗');
           }
 
-          // 更新翻譯文件檢視
-          fileProcessing.setTranslatedFiles(prev => [...prev, {
+          // 更新翻譯文件列表
+          const translatedFile = {
             id: Math.random().toString(),
             name: fileName,
             translatedContent: translatedContent,
             originalContent: originalContent,
-            status: 'completed',
+            status: 'completed' as const,
             isEmbedded: true,
-            embeddingProgress: 100
-          }]);
+            embeddingProgress: 100,
+            path: filePath
+          };
 
-          // 更新進度 - 加入知識庫
+          fileProcessing.setTranslatedFiles(prev => {
+            const existingIndex = prev.findIndex(f => 
+              f.name === fileName && 
+              f.originalContent === originalContent
+            );
+            
+            if (existingIndex >= 0) {
+              const newFiles = [...prev];
+              newFiles[existingIndex] = translatedFile;
+              return newFiles;
+            }
+            return [...prev, translatedFile];
+          });
+
           onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.9));
-
-          // 完成當前檔案處理
           currentFileIndex++;
           onProgress(Math.round((currentFileIndex / totalFiles) * 100));
         } catch (error) {
           console.error(`處理檔案 ${filePath} 時出錯:`, error);
-          // 繼續處理下一個檔案，而不是中斷整個過程
           currentFileIndex++;
           continue;
         }
       }
 
-      // 確保最後顯示 100%
       onProgress(100);
+      
+      // 不要刪除原始檔案，只更新檔案列表
+      await fetchFiles();
     } catch (error) {
       console.error('處理檔案時出錯:', error);
       throw error;

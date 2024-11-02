@@ -265,7 +265,9 @@ export const FileManager: React.FC<FileManagerProps> = ({
           setProgress
         );
       }
-      setSelectedFiles([]);
+
+      // 不要清空選擇的檔案
+      // setSelectedFiles([]);
       setShowActionModal(false);
       showNotification('處理完成！', 'success');
     } catch (error) {
