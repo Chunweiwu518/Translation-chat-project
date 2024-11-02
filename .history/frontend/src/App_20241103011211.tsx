@@ -170,7 +170,7 @@ const App: React.FC = () => {
       }
       return [];
     } catch (error) {
-      console.error('獲取資料夾檔案失敗:', error);
+      console.error('取資料夾檔案失敗:', error);
       return [];
     }
   };
@@ -201,97 +201,115 @@ const App: React.FC = () => {
       let currentFileIndex = 0;
 
       for (const filePath of allFiles) {
-        // 獲取檔案的目錄路徑
-        const pathParts = filePath.split('/');
-        pathParts.pop(); // 移除檔案名
-        const directoryPath = pathParts.join('/');
+        try {
+          // 獲取檔案的目錄路徑
+          const pathParts = filePath.split('/');
+          const fileName = pathParts.pop() || '';
+          const directoryPath = pathParts.join('/');
 
-        // 更新進度 - 開始處理新檔案
-        const baseProgress = (currentFileIndex / totalFiles) * 100;
-        onProgress(Math.round(baseProgress));
+          // 更新進度
+          const baseProgress = (currentFileIndex / totalFiles) * 100;
+          onProgress(Math.round(baseProgress));
 
-        // 從檔案系統讀取檔案內容
-        const fileResponse = await fetch(`http://localhost:5000/api/files/content/${filePath}`);
-        if (!fileResponse.ok) {
-          throw new Error(`無法讀取檔案 ${filePath}`);
-        }
-        const { content: originalContent } = await fileResponse.json();
-
-        // 更新進度 - 開始翻譯
-        onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.3));
-
-        // 翻譯處理...
-        const formData = new FormData();
-        const blob = new Blob([originalContent], { type: 'text/plain' });
-        const fileName = filePath.split('/').pop() || 'file.txt';
-        formData.append('file', blob, fileName);
-
-        const translateResponse = await fetch(
-          'http://localhost:5000/api/upload_and_translate',
-          {
-            method: 'POST',
-            body: formData,
+          // 從檔案系統讀取檔案內容
+          const fileResponse = await fetch(`http://localhost:5000/api/files/content/${encodeURIComponent(filePath)}`);
+          if (!fileResponse.ok) {
+            throw new Error(`無法讀取檔案 ${filePath}`);
           }
-        );
+          const { content } = await fileResponse.json();
+          originalContent = content;
 
-        // 更新進度 - 翻譯完成
-        onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.6));
+          // 更新進度 - 開始翻譯
+          onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.3));
 
-        if (!translateResponse.ok) {
-          const errorData = await translateResponse.json();
-          throw new Error(`翻譯失敗: ${errorData.detail || '未知錯誤'}`);
+          // 翻譯處理
+          const formData = new FormData();
+          const blob = new Blob([originalContent], { type: 'text/plain' });
+          formData.append('file', blob, fileName);
+
+          const translateResponse = await fetch(
+            'http://localhost:5000/api/upload_and_translate',
+            {
+              method: 'POST',
+              body: formData,
+            }
+          );
+
+          if (!translateResponse.ok) {
+            const errorData = await translateResponse.json();
+            throw new Error(`翻譯失敗: ${errorData.detail || '未知錯誤'}`);
+          }
+
+          const data = await translateResponse.json();
+          translatedContent = data.translated_content;
+          
+          // 更新進度 - 翻譯完成
+          onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.6));
+
+          // 加入知識庫
+          const embedResponse = await fetch('http://localhost:5000/api/embed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: translatedContent,
+              filename: fileName,
+              knowledge_base_id: knowledgeBaseId,
+            }),
+          });
+
+          if (!embedResponse.ok) {
+            throw new Error('加入知識庫失敗');
+          }
+
+          // 更新翻譯文件檢視 - 使用更穩定的 ID
+          const newTranslatedFile = {
+            id: `${fileName}-${Date.now()}`, // 使用更穩定的 ID
+            name: fileName,
+            translatedContent: translatedContent,
+            originalContent: originalContent,
+            status: 'completed' as const,
+            isEmbedded: true,
+            embeddingProgress: 100,
+            path: filePath // 保存完整路徑
+          };
+
+          fileProcessing.setTranslatedFiles(prev => {
+            // 檢查是否已存在相同檔案
+            const existingIndex = prev.findIndex(f => f.path === filePath);
+            if (existingIndex >= 0) {
+              // 如果存在，更新該檔案
+              const newFiles = [...prev];
+              newFiles[existingIndex] = newTranslatedFile;
+              return newFiles;
+            }
+            // 如果不存在，添加新檔案
+            return [...prev, newTranslatedFile];
+          });
+
+          // 更新進度
+          currentFileIndex++;
+          onProgress(Math.round((currentFileIndex / totalFiles) * 100));
+
+        } catch (error) {
+          console.error(`處理檔案 ${filePath} 時出錯:`, error);
+          // 將失敗的檔案也加入到列表中，但標記為失敗狀態
+          fileProcessing.setTranslatedFiles(prev => [
+            ...prev,
+            {
+              id: `${filePath}-${Date.now()}`,
+              name: filePath.split('/').pop() || '',
+              translatedContent: '',
+              originalContent: '',
+              status: 'failed' as const,
+              isEmbedded: false,
+              embeddingProgress: 0,
+              path: filePath,
+              error: error instanceof Error ? error.message : '未知錯誤'
+            }
+          ]);
+          currentFileIndex++;
+          continue;
         }
-
-        const data = await translateResponse.json();
-        
-        // 保存原始文件到原始目錄
-        const originalFormData = new FormData();
-        const originalBlob = new Blob([originalContent], { type: 'text/plain' });
-        originalFormData.append('files', originalBlob, fileName);
-        originalFormData.append('path', directoryPath || '/');  // 使用檔案的原始目錄路徑
-
-        // 上傳原始文件
-        const uploadOriginalResponse = await fetch('http://localhost:5000/api/files/upload', {
-          method: 'POST',
-          body: originalFormData,
-        });
-
-        if (!uploadOriginalResponse.ok) {
-          throw new Error('保存原始文件失敗');
-        }
-
-        // 加入知識庫
-        const embedResponse = await fetch('http://localhost:5000/api/embed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: data.translated_content,
-            filename: fileName,
-            knowledge_base_id: knowledgeBaseId,
-          }),
-        });
-
-        if (!embedResponse.ok) {
-          throw new Error('加入知識庫失敗');
-        }
-
-        // 更新翻譯文件檢視
-        fileProcessing.setTranslatedFiles(prev => [...prev, {
-          id: Math.random().toString(),
-          name: fileName,
-          translatedContent: data.translated_content,
-          originalContent: originalContent,
-          status: 'completed',
-          isEmbedded: true,
-          embeddingProgress: 100
-        }]);
-
-        // 更新進度 - 加入知識庫
-        onProgress(Math.round(baseProgress + (100 / totalFiles) * 0.9));
-
-        // 完成當前檔案處理
-        currentFileIndex++;
-        onProgress(Math.round((currentFileIndex / totalFiles) * 100));
       }
 
       // 確保最後顯示 100%
