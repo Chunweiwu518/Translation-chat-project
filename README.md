@@ -22,7 +22,7 @@
 
 ### 2. 知識庫對話
 <div align="center">
-  <img src="frontend/src/assets/images/知識庫對話介面" alt="知識庫對話介面" width="800"/>
+  <img src="frontend/src/assets/images/知識庫對話介面.png" alt="知識庫對話介面" width="800"/>
 </div>
 
 - 基於上傳文件的智能對話
@@ -32,7 +32,7 @@
 
 ### 3. 翻譯功能
 <div align="center">
-  <img src="frontend/src/assets/images/翻譯功能介面" alt="翻譯功能介面" width="800"/>
+  <img src="frontend/src/assets/images/翻譯功能介面.png" alt="翻譯功能介面" width="800"/>
 </div>
 
 - 可選擇是否需要翻譯
