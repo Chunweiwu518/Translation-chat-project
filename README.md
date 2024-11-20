@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./frontend/src/assets/images/logo.jpg" alt="Translation Assistant Logo" width="200"/>
+  <img src="frontend/src/assets/images/logo.jpg" alt="Translation Assistant Logo" width="200"/>
 </div>
 
 基於 RAG (檢索增強生成) 的智能翻譯助手系統，提供文件管理、知識庫對話及翻譯功能。
@@ -12,7 +12,7 @@
 
 ### 1. 檔案管理
 <div align="center">
-  <img src="screenshot1.png" alt="檔案管理介面" width="800"/>
+  <img src="frontend/src/assets/images/檔案管理介面.png" alt="檔案管理介面" width="800"/>
 </div>
 
 - 支援拖拽上傳和點擊選擇檔案
@@ -22,7 +22,7 @@
 
 ### 2. 知識庫對話
 <div align="center">
-  <img src="screenshot2.png" alt="知識庫對話介面" width="800"/>
+  <img src="frontend/src/assets/images/知識庫對話介面" alt="知識庫對話介面" width="800"/>
 </div>
 
 - 基於上傳文件的智能對話
@@ -32,7 +32,7 @@
 
 ### 3. 翻譯功能
 <div align="center">
-  <img src="screenshot3.png" alt="翻譯功能介面" width="800"/>
+  <img src="frontend/src/assets/images/翻譯功能介面" alt="翻譯功能介面" width="800"/>
 </div>
 
 - 可選擇是否需要翻譯
