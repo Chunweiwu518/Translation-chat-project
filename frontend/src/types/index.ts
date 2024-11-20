@@ -6,19 +6,6 @@ export interface Message {
   chunks?: string[];
 }
 
-export interface FileWithOptions {
-  id: string;
-  file: File;
-  name: string;
-  needTranslation: boolean;
-  status: 'pending' | 'translating' | 'embedding' | 'completed' | 'error';
-  progress: number;
-  selected: boolean;
-  content?: string;
-  translatedContent?: string;
-  error?: string;
-}
-
 export interface TranslatedFile {
   id: string;
   name: string;
@@ -57,8 +44,6 @@ export interface KnowledgeBase {
   description: string;
 }
 
-export type KnowledgeBaseInfo = KnowledgeBase;
-
 export interface ChatHook {
   messages: Message[];
   chatSessions: ChatSession[];
@@ -74,24 +59,19 @@ export interface ChatHook {
 export interface FileProcessingHook {
   uploadProgress: {[key: string]: number};
   translatedFiles: TranslatedFile[];
-  handleFileUpload: (files: FileWithOptions[]) => Promise<void>;
+  handleFileUpload: (files: FileWithMetadata[]) => Promise<void>;
   handleBatchEmbed: (fileIds: string[], targetKnowledgeBaseId: string) => Promise<void>;
   setTranslatedFiles: React.Dispatch<React.SetStateAction<TranslatedFile[]>>;
   handleDelete: (fileId: string) => Promise<void>;
 }
 
 export interface KnowledgeBaseHook {
-  knowledgeBases: KnowledgeBaseInfo[];
+  knowledgeBases: KnowledgeBase[];
   currentKnowledgeBase: string;
   setCurrentKnowledgeBase: (id: string) => void;
   createKnowledgeBase: (name: string, description: string) => Promise<void>;
   deleteKnowledgeBase: (id: string) => Promise<void>;
   resetKnowledgeBase: (id: string) => Promise<void>;
-}
-
-export interface TranslateModeProps {
-  fileProcessing: FileProcessingHook;
-  knowledgeBase: KnowledgeBaseHook;
 }
 
 export interface ChatModeProps {
@@ -125,4 +105,9 @@ export interface FileInfo {
   type: string;
   created_at: string;
   isDirectory: boolean;
+}
+
+export interface FileWithMetadata extends File {
+  id?: string;
+  needTranslation?: boolean;
 }

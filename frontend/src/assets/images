@@ -1,0 +1,4 @@
+建立新資料夾結構：
+assets/
+└── images/
+    └── logo.jpg  (將機1.jpg 改名並放在這裡) 

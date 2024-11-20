@@ -1,16 +1,17 @@
 // src/components/Settings.tsx
 import React from 'react';
 
+// 定義組件的 Props 介面
 interface SettingsProps {
-  currentModel: string;
-  temperature: number;
-  maxTokens: number;
-  topP: number;
-  frequencyPenalty: number;
-  seed: number;
-  topK: number;  // RAG 參數
-  similarityThreshold: number; // RAG 參數
-  onSettingsChange: (settings: {
+  currentModel: string;           // 當前選擇的模型
+  temperature: number;            // 溫度參數，控制生成的創造性
+  maxTokens: number;             // 最大生成 token 數
+  topP: number;                  // Top-P 採樣參數
+  frequencyPenalty: number;      // 頻率懲罰參數
+  seed: number;                  // 隨機種子
+  topK: number;                  // RAG 檢索的文檔數量
+  similarityThreshold: number;   // RAG 相似度閾值
+  onSettingsChange: (settings: {  // 設定變更的回調函數
     model: string;
     temperature: number;
     maxTokens: number;
@@ -22,6 +23,7 @@ interface SettingsProps {
   }) => void;
 }
 
+// Settings 組件的主要實現
 export const Settings: React.FC<SettingsProps> = ({
   currentModel,
   temperature,
@@ -33,15 +35,18 @@ export const Settings: React.FC<SettingsProps> = ({
   similarityThreshold,
   onSettingsChange,
 }) => {
+  // 可選擇的模型列表
   const models = [
     'llama3.1-ffm-70b-32k-chat',
     'llama3-ffm-70b-chat',
     'ffm-mixtral-8x7b-32k-instruct'
   ];
 
+  // 渲染組件 UI
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm">
       <div className="space-y-6">
+        {/* 模型選擇區域 */}
         <div>
           <h3 className="text-lg font-semibold mb-3">模型選擇</h3>
           <select
@@ -64,9 +69,11 @@ export const Settings: React.FC<SettingsProps> = ({
           </select>
         </div>
 
+        {/* 生成參數設定區域 */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">生成參數</h3>
           
+          {/* Temperature 設定 */}
           <div>
             <div className="flex justify-between">
               <label className="text-sm font-medium">Temperature</label>
@@ -93,6 +100,7 @@ export const Settings: React.FC<SettingsProps> = ({
             <p className="text-xs text-gray-500 mt-1">控制回應的創造性 (0: 保守, 1: 創造性)</p>
           </div>
 
+          {/* Max Tokens 設定 */}
           <div>
             <div className="flex justify-between">
               <label className="text-sm font-medium">Max Tokens</label>
@@ -119,6 +127,7 @@ export const Settings: React.FC<SettingsProps> = ({
             <p className="text-xs text-gray-500 mt-1">控制回應的最大長度</p>
           </div>
 
+          {/* Top P 設定 */}
           <div>
             <div className="flex justify-between">
               <label className="text-sm font-medium">Top P</label>
@@ -145,6 +154,7 @@ export const Settings: React.FC<SettingsProps> = ({
             <p className="text-xs text-gray-500 mt-1">控制回應的多樣性</p>
           </div>
 
+          {/* Frequency Penalty 設定 */}
           <div>
             <div className="flex justify-between">
               <label className="text-sm font-medium">Frequency Penalty</label>
@@ -171,6 +181,7 @@ export const Settings: React.FC<SettingsProps> = ({
             <p className="text-xs text-gray-500 mt-1">控制詞彙重複的懲罰程度</p>
           </div>
 
+          {/* Seed 設定 */}
           <div>
             <div className="flex justify-between">
               <label className="text-sm font-medium">Seed</label>
@@ -195,8 +206,10 @@ export const Settings: React.FC<SettingsProps> = ({
             <p className="text-xs text-gray-500 mt-1">控制隨機性種子</p>
           </div>
 
+          {/* RAG 參數設定區域 */}
           <h3 className="text-lg font-semibold pt-4">RAG 參數</h3>
 
+          {/* Top K 設定 */}
           <div>
             <div className="flex justify-between">
               <label className="text-sm font-medium">Top K</label>
@@ -223,6 +236,7 @@ export const Settings: React.FC<SettingsProps> = ({
             <p className="text-xs text-gray-500 mt-1">檢索相關文件的數量</p>
           </div>
 
+          {/* Similarity Threshold 設定 */}
           <div>
             <div className="flex justify-between">
               <label className="text-sm font-medium">Similarity Threshold</label>
@@ -250,6 +264,7 @@ export const Settings: React.FC<SettingsProps> = ({
           </div>
         </div>
 
+        {/* 當前設定顯示區域 */}
         <div className="mt-4 p-4 bg-gray-50 rounded">
           <h4 className="font-medium mb-2">當前設定</h4>
           <pre className="text-sm text-gray-600">

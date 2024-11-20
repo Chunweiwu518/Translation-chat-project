@@ -1,6 +1,6 @@
 // src/hooks/useFileProcessing.ts
 import { useState, useEffect } from 'react';
-import { FileWithOptions, TranslatedFile, FileProcessingHook } from '../types';
+import { TranslatedFile, FileProcessingHook, FileWithMetadata } from '../types';
 
 export function useFileProcessing(): FileProcessingHook {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
@@ -49,11 +49,11 @@ export function useFileProcessing(): FileProcessingHook {
     fetchTranslations();
   }, []);
 
-  const handleFileUpload = async (files: FileWithOptions[]) => {
+  const handleFileUpload = async (files: FileWithMetadata[]) => {
     for (const file of files) {
       try {
         const formData = new FormData();
-        formData.append('file', file.file as unknown as File);
+        formData.append('file', file);
 
         const response = await fetch(
           file.needTranslation

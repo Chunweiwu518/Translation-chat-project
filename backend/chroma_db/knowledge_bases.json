@@ -1,7 +1,0 @@
-{
-  "default": {
-    "name": "預設知識庫",
-    "description": "預設的知識庫",
-    "path": "chroma_db\\default"
-  }
-}

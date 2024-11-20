@@ -1,11 +1,9 @@
 // src/hooks/useKnowledgeBase.ts
 import { useState, useEffect } from 'react';
-import { KnowledgeBaseInfo, KnowledgeBaseHook } from '../types';
+import { KnowledgeBase, KnowledgeBaseHook } from '../types';
 
 export function useKnowledgeBase(): KnowledgeBaseHook {
-  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseInfo[]>([
-    { id: "default", name: "預設知識庫", description: "預設的知識庫" },
-  ]);
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [currentKnowledgeBase, setCurrentKnowledgeBase] = useState("default");
 
   const fetchKnowledgeBases = async () => {
