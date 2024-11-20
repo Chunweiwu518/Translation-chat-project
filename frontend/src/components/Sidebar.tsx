@@ -8,6 +8,7 @@ import {
   Languages,
 } from "lucide-react";
 import { ChatSession, TranslatedFile } from "../types";
+import logo from '../assets/images/logo.jpg';
 
 interface SidebarProps {
   currentMode: string; // 當前模式
@@ -34,8 +35,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="mb-1 flex flex-col items-center">
         <h1 className="text-lg font-bold mb-1">吉一卡哇助手</h1> {/* 標題 */}
         <img 
-          src="機1.jpg" 
-          alt="Logo" 
+          src={logo} 
+          alt="Translation Assistant Logo" 
           className="w-32 h-32 object-contain hover:scale-110 transition-transform duration-200" // Logo 圖片
         />
       </div>
