@@ -1,57 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "./components/Sidebar";
-import { FileUpload } from "./components/FileUpload";
 import { Chat } from "./components/Chat";
-import { TranslatedFiles } from "./components/TranslatedFiles";
-import { BatchFileProcessor } from "./components/BatchFileProcessor";
 import { WelcomeChatScreen } from "./components/WelcomeChatScreen"; // 新增此組件
 import { useChat } from "./hooks/useChat";
 import { useFileProcessing } from "./hooks/useFileProcessing";
 import { useKnowledgeBase } from "./hooks/useKnowledgeBase";
-import { ModelSettings, TranslateModeProps, ChatModeProps, Message, TranslatedFile, FileInfo } from "./types";
+import { ModelSettings, ChatModeProps, Message, TranslatedFile, FileInfo } from "./types";
 import { FileManager } from './components/FileManager';
 import { KnowledgeBaseManager } from './components/KnowledgeBaseManager';
 import { TranslatedFilesView } from './components/TranslatedFilesView';
-
-const TranslateMode: React.FC<TranslateModeProps> = ({ fileProcessing, knowledgeBase }) => (
-  <div className="max-w-4xl mx-auto">
-    <div className="p-6 bg-white rounded-lg shadow-sm">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold mb-4">上傳檔案</h2>
-        <p className="text-gray-500 mb-8">拖拽檔案到此處或點擊上傳</p>
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-12">
-          <input
-            type="file"
-            multiple
-            onChange={(e) => {
-              const files = Array.from(e.target.files || []).map(file => ({
-                id: Math.random().toString(),
-                file,
-                name: file.name,
-                needTranslation: true,  // 預設需要翻譯
-                status: 'pending' as const,
-                progress: 0,
-                selected: false
-              }));
-              fileProcessing.handleFileUpload(files);
-            }}
-            className="hidden"
-            id="fileInput"
-          />
-          <label
-            htmlFor="fileInput"
-            className="cursor-pointer inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            選擇檔案
-          </label>
-          <p className="mt-2 text-sm text-gray-500">
-            支援 PDF、TXT、DOCX 格式
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 const ChatMode: React.FC<ChatModeProps> = ({
   chat,
@@ -142,8 +99,9 @@ const ChatMode: React.FC<ChatModeProps> = ({
 };
 
 const App: React.FC = () => {
-  // 將初始模式改為 "files"
+  // Hooks 應該都在這裡
   const [currentMode, setCurrentMode] = useState("files");
+  const [files, setFiles] = useState<FileInfo[]>([]);
   const [modelSettings, setModelSettings] = useState<ModelSettings>({
     model: "llama3.1-ffm-70b-32k-chat",
     temperature: 0.3,
@@ -302,75 +260,18 @@ const App: React.FC = () => {
     }
   };
 
-  // 修改直接加入知識庫函數
-  const handleBatchEmbed = async (
-    paths: string[],
-    knowledgeBaseId: string,
-    onProgress: (progress: number) => void
-  ): Promise<void> => {
-    try {
-      let allFiles: string[] = [];
-      
-      // 收集所有檔案路徑
-      for (const path of paths) {
-        const fileInfo = files.find((f: FileInfo) => f.id === path);
-        if (fileInfo) {
-          if (fileInfo.isDirectory) {
-            const folderFiles = await getFolderFiles(fileInfo.path);
-            allFiles = [...allFiles, ...folderFiles];
-          } else {
-            allFiles.push(fileInfo.path);
-          }
-        }
-      }
-
-      const totalFiles = allFiles.length;
-      let currentFileIndex = 0;
-
-      for (const filePath of allFiles) {
-        // 獲取檔案內容
-        const fileResponse = await fetch(`http://localhost:5000/api/files/content/${filePath}`);
-        if (!fileResponse.ok) {
-          throw new Error(`無法讀取檔案 ${filePath}`);
-        }
-        const { content } = await fileResponse.json();
-
-        // 將檔案加入知識庫
-        const embedResponse = await fetch('http://localhost:5000/api/embed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: content,  // 直接使用原始內容
-            filename: filePath,
-            knowledge_base_id: knowledgeBaseId,
-          }),
-        });
-
-        if (!embedResponse.ok) {
-          throw new Error(`檔案 ${filePath} 加入知識庫失敗`);
-        }
-
-        currentFileIndex++;
-        onProgress(Math.round((currentFileIndex / totalFiles) * 100));
-      }
-    } catch (error) {
-      console.error('處理檔案時出錯:', error);
-      throw error;
-    }
-  };
-
   // 修改檔案對話處理函數
-  const handleFileChat = async (files: string[]): Promise<void> => {
+  const handleFileChat = async (filePaths: string[]): Promise<void> => {
     try {
-      // 顯示初始化訊息
+      // 顯示��始化訊息
       const initMessage: Message = {
         sender: "system",
-        text: `正在處理 ${files.length} 個檔案，請稍候...`,
+        text: `正在處理 ${filePaths.length} 個檔案，請稍候...`,
       };
       chat.setMessages([initMessage]);
 
       // 依序處理每個檔案
-      for (const file_path of files) {
+      for (const file_path of filePaths) {
         // 獲取檔案內容
         const fileResponse = await fetch(`http://localhost:5000/api/files/translated_content/${file_path}`);
         if (!fileResponse.ok) {
@@ -397,7 +298,7 @@ const App: React.FC = () => {
       // 更新成功訊息
       const successMessage: Message = {
         sender: "system",
-        text: `已成功載入 ${files.length} 個翻譯檔案到預設知識庫，您可以開始詢問相關問題。`,
+        text: `已成功載入 ${filePaths.length} 個翻譯檔案到預設知識庫，您可以開始詢問相關問題。`,
       };
       chat.setMessages([successMessage]);
 
@@ -428,9 +329,6 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  // 添加 files 狀態
-  const [files, setFiles] = useState<FileInfo[]>([]);
-
   // 添加獲取檔案列表的函數
   const fetchFiles = async () => {
     try {
@@ -448,6 +346,68 @@ const App: React.FC = () => {
   useEffect(() => {
     fetchFiles();
   }, []);
+
+  // 在 handleBatchTranslateAndEmbed 函數後面添加
+  const handleBatchEmbed = async (
+    paths: string[],
+    knowledgeBaseId: string,
+    onProgress: (progress: number) => void
+  ): Promise<void> => {
+    try {
+      let allFiles: string[] = [];
+      
+      // 收集所有檔案路徑
+      for (const path of paths) {
+        const fileInfo = files.find((f: FileInfo) => f.id === path);
+        if (fileInfo) {
+          if (fileInfo.isDirectory) {
+            const folderFiles = await getFolderFiles(fileInfo.path);
+            allFiles = [...allFiles, ...folderFiles];
+          } else {
+            allFiles.push(fileInfo.path);
+          }
+        }
+      }
+
+      const totalFiles = allFiles.length;
+      let currentFileIndex = 0;
+
+      for (const filePath of allFiles) {
+        // 更新進度
+        onProgress(Math.round((currentFileIndex / totalFiles) * 100));
+
+        // 從檔案系統讀取檔案內容
+        const fileResponse = await fetch(`http://localhost:5000/api/files/content/${filePath}`);
+        if (!fileResponse.ok) {
+          throw new Error(`無法讀取檔案 ${filePath}`);
+        }
+        const { content } = await fileResponse.json();
+
+        // 加入知識庫
+        const embedResponse = await fetch('http://localhost:5000/api/embed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: content,
+            filename: filePath.split('/').pop() || 'file.txt',
+            knowledge_base_id: knowledgeBaseId,
+          }),
+        });
+
+        if (!embedResponse.ok) {
+          throw new Error('加入知識庫失敗');
+        }
+
+        currentFileIndex++;
+      }
+
+      // 確保最後顯示 100%
+      onProgress(100);
+    } catch (error) {
+      console.error('處理檔案時出錯:', error);
+      throw error;
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">

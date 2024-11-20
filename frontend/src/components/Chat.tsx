@@ -1,32 +1,39 @@
+// 導入必要的 React 功能
 import React, { useState, useRef, useEffect } from "react";
+
+// 導入圖標組件，用於UI顯示
 import {
-  ChevronDown,
-  ChevronUp,
-  Settings,
-  Database,
-  PlusCircle,
-  Trash2,
-  RefreshCw,
-  Languages,
+  ChevronDown,  // 向下箭頭
+  ChevronUp,    // 向上箭頭
+  Settings,     // 設定圖標
+  Database,     // 數據庫圖標
+  PlusCircle,   // 新增圖標
+  Trash2,       // 刪除圖標
+  RefreshCw,    // 重整圖標
+  Languages,    // 語言圖標
 } from "lucide-react";
+
+// 導入類型定義
 import { Message, ModelSettings } from "../types";
 
+// 定義 ChatProps 介面，描述組件需要的所有屬性
 interface ChatProps {
-  messages: Message[];
-  onSendMessage: (text: string) => void;
-  onClearChat: () => void;
-  currentKnowledgeBaseName: string;
-  modelSettings: ModelSettings;
-  onSettingsChange: (settings: ModelSettings) => void;
-  knowledgeBases: Array<{ id: string; name: string; description: string }>;
-  currentKnowledgeBase: string;
-  onSwitchKnowledgeBase: (id: string) => void;
-  onCreateKnowledgeBase: (name: string, description: string) => void;
-  onResetKnowledgeBase: (id: string) => void;
-  onDeleteKnowledgeBase: (id: string) => void;
-  onUploadAndEmbed: (file: File, needTranslation: boolean) => Promise<void>;
+  messages: Message[];              // 聊天訊息陣列
+  onSendMessage: (text: string) => void;  // 發送新訊息的回調函數
+  onClearChat: () => void;         // 清除聊天記錄的回調函數
+  currentKnowledgeBaseName: string; // 當前使用的知識庫名稱
+  modelSettings: ModelSettings;     // AI 模型的設定參數
+  onSettingsChange: (settings: ModelSettings) => void;  // 更新模型設定的回調函數
+  knowledgeBases: Array<{ id: string; name: string; description: string }>;  // 可用的知識庫列表
+  currentKnowledgeBase: string;     // 當前選中的知識庫 ID
+  onSwitchKnowledgeBase: (id: string) => void;  // 切換知識庫的回調函數
+  onCreateKnowledgeBase: (name: string, description: string) => void;  // 創建新知識庫的回調函數
+  onResetKnowledgeBase: (id: string) => void;   // 重置知識庫的回調函數
+  onDeleteKnowledgeBase: (id: string) => void;  // 刪除知識庫的回調函數
+  onUploadAndEmbed: (file: File, needTranslation: boolean) => Promise<void>;  // 上傳和嵌入文件的回調函數
 }
 
+// Chat 組件的主要實現
 export const Chat: React.FC<ChatProps> = ({
   messages,
   onSendMessage,
@@ -42,49 +49,55 @@ export const Chat: React.FC<ChatProps> = ({
   onDeleteKnowledgeBase,
   onUploadAndEmbed,
 }) => {
-  const [input, setInput] = useState("");
-  const [expandedMessageId, setExpandedMessageId] = useState<number | null>(
-    null
-  );
-  const [showSettings, setShowSettings] = useState(false);
-  const [showKnowledgeBaseSettings, setShowKnowledgeBaseSettings] =
-    useState(true);  // 改為 true
-  const [showNewKBForm, setShowNewKBForm] = useState(false);
-  const [newKBName, setNewKBName] = useState("");
-  const [newKBDescription, setNewKBDescription] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [showRAGSettings, setShowRAGSettings] = useState(false);  // 添加這行
-  const [showUploadOptions, setShowUploadOptions] = useState(false);
-  const [currentUploadMode, setCurrentUploadMode] = useState<'translate' | 'direct'>('translate');
+  // 組件內部狀態管理
+  const [input, setInput] = useState("");  // 用戶輸入的文字
+  const [expandedMessageId, setExpandedMessageId] = useState<number | null>(null);  // 追踪哪條訊息被展開顯示參考文件
+  const [showSettings, setShowSettings] = useState(false);  // 控制是否顯示設定面板
+  const [showKnowledgeBaseSettings, setShowKnowledgeBaseSettings] = useState(true);  // 控制是否顯示知識庫設定
+  const [showNewKBForm, setShowNewKBForm] = useState(false);  // 控制是否顯示新增知識庫表單
+  const [newKBName, setNewKBName] = useState("");  // 新知識庫名稱
+  const [newKBDescription, setNewKBDescription] = useState("");  // 新知識庫描述
+  const [isUploading, setIsUploading] = useState(false);  // 文件上傳狀態
+  const [showRAGSettings, setShowRAGSettings] = useState(false);  // 控制是否顯示 RAG 設定
+  const [showUploadOptions, setShowUploadOptions] = useState(false);  // 控制是否顯示上傳選項
+  const [currentUploadMode, setCurrentUploadMode] = useState<'translate' | 'direct'>('translate');  // 上傳模式選擇
 
+  // DOM 引用
+  const fileInputRef = useRef<HTMLInputElement>(null);  // 文件上傳輸入框的引用
+  const messagesEndRef = useRef<HTMLDivElement>(null);  // 訊息列表末端的引用
+
+  // 自動滾動到最新訊息
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // 處理訊息發送
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim()) {
       onSendMessage(input);
-      setInput("");
+      setInput("");  // 清空輸入框
     }
   };
 
+  // 處理創建新知識庫
   const handleCreateKB = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newKBName.trim()) {
       await onCreateKnowledgeBase(newKBName, newKBDescription);
+      // 重置表單
       setNewKBName("");
       setNewKBDescription("");
       setShowNewKBForm(false);
     }
   };
 
+  // 組件渲染部分
   return (
     <div className="flex h-full gap-4">
-      {/* 主要聊天區域 */}
+      {/* 主要聊天區域 - 包含訊息列表和輸入框 */}
       <div className="flex-1 border rounded-lg bg-white flex flex-col">
+        {/* 頂部標題欄 */}
         <div className="p-4 border-b flex items-center justify-between bg-gray-50">
           <div className="flex items-center space-x-4">
             <h2 className="text-lg font-semibold">知識對話</h2>
@@ -110,7 +123,9 @@ export const Chat: React.FC<ChatProps> = ({
           </div>
         </div>
 
+        {/* 訊息列表區域 */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* 遍歷並渲染所有訊息 */}
           {messages.map((msg, idx) => (
             <div
               key={idx}
@@ -160,9 +175,10 @@ export const Chat: React.FC<ChatProps> = ({
                 )}
             </div>
           ))}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} />  {/* 用於自動滾動的錨點 */}
         </div>
 
+        {/* 訊息輸入表單 */}
         <form onSubmit={handleSubmit} className="p-4 border-t">
           <div className="flex gap-2">
             <input
@@ -181,9 +197,10 @@ export const Chat: React.FC<ChatProps> = ({
           </div>
         </form>
       </div>
-      {/* 右側邊欄 */}
+
+      {/* 右側邊欄 - 包含知識庫管理和模型設定 */}
       <div className="w-80 space-y-4">
-        {/* 知識庫選擇 */}
+        {/* 知識庫管理面板 */}
         <div 
           className="bg-white rounded-lg p-4 shadow-sm cursor-pointer"
           onClick={() => setShowKnowledgeBaseSettings(!showKnowledgeBaseSettings)}
@@ -274,7 +291,8 @@ export const Chat: React.FC<ChatProps> = ({
             </div>
           )}
         </div>
-        {/* 模型設定 */}
+
+        {/* 模型設定面板 */}
         <div 
           className="bg-white rounded-lg p-4 shadow-sm cursor-pointer"
           onClick={() => setShowSettings(!showSettings)}  // 添加點擊事件
@@ -429,7 +447,7 @@ export const Chat: React.FC<ChatProps> = ({
           )}
         </div>
 
-        {/* RAG 設定 */}
+        {/* RAG 設定面板 */}
         <div 
           className="bg-white rounded-lg p-4 shadow-sm mt-4 cursor-pointer"
           onClick={() => setShowRAGSettings(!showRAGSettings)}  // 添加點擊事件

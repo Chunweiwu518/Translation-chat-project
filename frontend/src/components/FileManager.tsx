@@ -1,3 +1,9 @@
+// 基本功能：
+// 1. 瀏覽文件和資料夾
+// 2. 上傳、下載文件
+// 3. 創建、刪除資料夾
+// 4. 批次處理文件
+// 5. 搜索文件
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Loader, 
@@ -17,31 +23,31 @@ import {
 } from 'lucide-react';
 
 interface FileInfo {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  created_at: string;
-  path: string;
-  isDirectory: boolean;
+  id: string; // 文件的唯一標識符
+  name: string; // 文件名稱
+  size: number; // 文件大小
+  type: string; // 文件類型
+  created_at: string; // 文件創建時間
+  path: string; // 文件路徑
+  isDirectory: boolean; // 是否為資料夾
 }
 
 interface FileManagerProps {
-  knowledgeBases: Array<{ id: string; name: string }>;
+  knowledgeBases: Array<{ id: string; name: string }>; // 知識庫列表
   onBatchTranslateAndEmbed: (
     files: string[], 
     knowledgeBaseId: string, 
     onProgress: (progress: number) => void
-  ) => Promise<void>;
+  ) => Promise<void>; // 批次翻譯並嵌入的函數
   onBatchEmbed: (
     files: string[], 
     knowledgeBaseId: string,
     onProgress: (progress: number) => void
-  ) => Promise<void>;
-  onModeChange: (mode: 'chat' | 'file') => void;
-  onFileChat: (files: string[]) => void;
-  files: FileInfo[];
-  onFilesChange: (files: FileInfo[]) => void;
+  ) => Promise<void>; // 批次嵌入的函數
+  onModeChange: (mode: 'chat' | 'file') => void; // 切換模式的函數
+  onFileChat: (files: string[]) => void; // 開始文件對話的函數
+  files: FileInfo[]; // 文件列表
+  onFilesChange: (files: FileInfo[]) => void; // 文件列表變更的函數
 }
 
 export const FileManager: React.FC<FileManagerProps> = ({
@@ -53,40 +59,40 @@ export const FileManager: React.FC<FileManagerProps> = ({
   files,
   onFilesChange
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPath, setCurrentPath] = useState('/');
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState('');
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false); // 加載狀態
+  const [searchTerm, setSearchTerm] = useState(''); // 搜索關鍵字
+  const [currentPath, setCurrentPath] = useState('/'); // 當前路徑
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]); // 選中的文件ID
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false); // 是否顯示新建資料夾模態框
+  const [newFolderName, setNewFolderName] = useState(''); // 新資料夾名稱
+  const [showActionModal, setShowActionModal] = useState(false); // 是否顯示操作模態框
+  const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState(''); // 選中的知識庫ID
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set()); // 展開的資料夾
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     type: 'background' | 'file' | 'folder';
     target?: FileInfo;
-  } | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [currentAction, setCurrentAction] = useState<'translate' | 'direct'>('direct');
+  } | null>(null); // 右鍵選單狀態
+  const [processing, setProcessing] = useState(false); // 處理狀態
+  const [progress, setProgress] = useState(0); // 處理進度
+  const [currentAction, setCurrentAction] = useState<'translate' | 'direct'>('direct'); // 當前操作
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
     type: 'success' | 'error';
-  }>({ show: false, message: '', type: 'success' });
-  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  }>({ show: false, message: '', type: 'success' }); // 通知狀態
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false); // Ctrl鍵狀態
+  const [isUploading, setIsUploading] = useState(false); // 上傳狀態
   const [selectionBox, setSelectionBox] = useState<{
     startX: number;
     startY: number;
     currentX: number;
     currentY: number;
     isSelecting: boolean;
-  } | null>(null);
-  const fileListRef = useRef<HTMLDivElement>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  } | null>(null); // 框選狀態
+  const fileListRef = useRef<HTMLDivElement>(null); // 文件列表的引用
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // 視圖模式
 
   // 獲取檔案列表
   const fetchFiles = async () => {
@@ -109,7 +115,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     }
   };
 
-  // 創建新料夾
+  // 創建新資料夾
   const handleCreateFolder = async () => {
     if (!newFolderName) return;
     
@@ -363,7 +369,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     }
   };
 
-  // 添加返回上一層的數
+  // 添加返回上一層的功能
   const handleGoBack = () => {
     const parentPath = currentPath.split('/').slice(0, -1).join('/');
     setCurrentPath(parentPath || '/');
@@ -423,7 +429,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
       window.URL.revokeObjectURL(url);
       
       closeContextMenu();
-      showNotification('案下載成功', 'success');
+      showNotification('檔案下載成功', 'success');
     } catch (error) {
       console.error('下載檔案失敗:', error);
       showNotification('下載檔案失敗', 'error');
