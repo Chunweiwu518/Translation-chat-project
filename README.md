@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="frontend/src/assets/images/logo.jpg" alt="Translation Assistant Logo" width="200"/>
+  <img src="./frontend/src/assets/images/logo.jpg" alt="Translation Assistant Logo" width="200"/>
 </div>
 
 基於 RAG (檢索增強生成) 的智能翻譯助手系統，提供文件管理、知識庫對話及翻譯功能。
