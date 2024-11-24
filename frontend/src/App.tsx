@@ -118,10 +118,13 @@ const App: React.FC = () => {
   const fileProcessing = useFileProcessing();
   const chat = useChat();
 
+  // 將所有的 http://localhost:5000 改為使用環境變數
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
   // 新增獲取資料夾內所有檔案的函數
   const getFolderFiles = async (folderPath: string): Promise<string[]> => {
     try {
-      const response = await fetch(`http://localhost:5000/api/files/recursive?path=${encodeURIComponent(folderPath)}`);
+      const response = await fetch(`${API_URL}/api/files/recursive?path=${encodeURIComponent(folderPath)}`);
       if (response.ok) {
         const files: FileInfo[] = await response.json();
         return files.map(file => file.path);
@@ -185,7 +188,7 @@ const App: React.FC = () => {
         formData.append('file', blob, fileName);
 
         const translateResponse = await fetch(
-          'http://localhost:5000/api/upload_and_translate',
+          `${API_URL}/api/upload_and_translate`,
           {
             method: 'POST',
             body: formData,
@@ -209,7 +212,7 @@ const App: React.FC = () => {
         originalFormData.append('path', directoryPath || '/');  // 使用檔案的原始目錄路徑
 
         // 上傳原始文件
-        const uploadOriginalResponse = await fetch('http://localhost:5000/api/files/upload', {
+        const uploadOriginalResponse = await fetch(`${API_URL}/api/files/upload`, {
           method: 'POST',
           body: originalFormData,
         });
@@ -219,7 +222,7 @@ const App: React.FC = () => {
         }
 
         // 加入知識庫
-        const embedResponse = await fetch('http://localhost:5000/api/embed', {
+        const embedResponse = await fetch(`${API_URL}/api/embed`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -263,7 +266,7 @@ const App: React.FC = () => {
   // 修改檔案對話處理函數
   const handleFileChat = async (filePaths: string[]): Promise<void> => {
     try {
-      // 顯示��始化訊息
+      // 顯示始化訊息
       const initMessage: Message = {
         sender: "system",
         text: `正在處理 ${filePaths.length} 個檔案，請稍候...`,
