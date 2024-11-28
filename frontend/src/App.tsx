@@ -16,6 +16,8 @@ const ChatMode: React.FC<ChatModeProps> = ({
   modelSettings,
   onSettingsChange,
 }) => {
+  const API_URL = process.env.REACT_APP_API_URL;
+
   if (!chat.currentSession) {
     return (
       <WelcomeChatScreen 
@@ -54,8 +56,8 @@ const ChatMode: React.FC<ChatModeProps> = ({
     
           try {
             const uploadEndpoint = needTranslation
-              ? "http://localhost:5000/api/upload_and_translate"
-              : "http://localhost:5000/api/upload";
+              ? `${API_URL}/api/upload_and_translate`
+              : `${API_URL}/api/upload`;
     
             const uploadResponse = await fetch(uploadEndpoint, {
               method: "POST",
@@ -66,7 +68,7 @@ const ChatMode: React.FC<ChatModeProps> = ({
               const data = await uploadResponse.json();
               const content = needTranslation ? data.translated_content : data.content;
     
-              const embedResponse = await fetch("http://localhost:5000/api/embed", {
+              const embedResponse = await fetch(`${API_URL}/api/embed`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -119,7 +121,8 @@ const App: React.FC = () => {
   const chat = useChat();
 
   // 將所有的 http://localhost:5000 改為使用環境變數
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const API_URL = process.env.REACT_APP_API_URL;
+  console.log('API URL:', API_URL); // 檢查環境變數是否正確載入
 
   // 新增獲取資料夾內所有檔案的函數
   const getFolderFiles = async (folderPath: string): Promise<string[]> => {
@@ -172,7 +175,7 @@ const App: React.FC = () => {
         onProgress(Math.round(baseProgress));
 
         // 從檔案系統讀取檔案內容
-        const fileResponse = await fetch(`http://localhost:5000/api/files/content/${filePath}`);
+        const fileResponse = await fetch(`${API_URL}/api/files/content/${filePath}`);
         if (!fileResponse.ok) {
           throw new Error(`無法讀取檔案 ${filePath}`);
         }
@@ -209,7 +212,7 @@ const App: React.FC = () => {
         const originalFormData = new FormData();
         const originalBlob = new Blob([originalContent], { type: 'text/plain' });
         originalFormData.append('files', originalBlob, fileName);
-        originalFormData.append('path', directoryPath || '/');  // 使用檔案的原始目錄路徑
+        originalFormData.append('path', directoryPath || '/');  // 使用檔案原始目錄路徑
 
         // 上傳原始文件
         const uploadOriginalResponse = await fetch(`${API_URL}/api/files/upload`, {
@@ -276,14 +279,14 @@ const App: React.FC = () => {
       // 依序處理每個檔案
       for (const file_path of filePaths) {
         // 獲取檔案內容
-        const fileResponse = await fetch(`http://localhost:5000/api/files/translated_content/${file_path}`);
+        const fileResponse = await fetch(`${API_URL}/api/files/translated_content/${file_path}`);
         if (!fileResponse.ok) {
           throw new Error(`無法讀取檔案 ${file_path}`);
         }
         const { content: translatedContent } = await fileResponse.json();
 
         // 將檔案加入知識庫
-        const embedResponse = await fetch('http://localhost:5000/api/embed', {
+        const embedResponse = await fetch(`${API_URL}/api/embed`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -335,7 +338,7 @@ const App: React.FC = () => {
   // 添加獲取檔案列表的函數
   const fetchFiles = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/files?path=/`);
+      const response = await fetch(`${API_URL}/api/files?path=/`);
       if (response.ok) {
         const data = await response.json();
         setFiles(data);
@@ -380,14 +383,14 @@ const App: React.FC = () => {
         onProgress(Math.round((currentFileIndex / totalFiles) * 100));
 
         // 從檔案系統讀取檔案內容
-        const fileResponse = await fetch(`http://localhost:5000/api/files/content/${filePath}`);
+        const fileResponse = await fetch(`${API_URL}/api/files/content/${filePath}`);
         if (!fileResponse.ok) {
           throw new Error(`無法讀取檔案 ${filePath}`);
         }
         const { content } = await fileResponse.json();
 
         // 加入知識庫
-        const embedResponse = await fetch('http://localhost:5000/api/embed', {
+        const embedResponse = await fetch(`${API_URL}/api/embed`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

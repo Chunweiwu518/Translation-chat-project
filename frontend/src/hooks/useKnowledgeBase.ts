@@ -2,13 +2,15 @@
 import { useState, useEffect } from 'react';
 import { KnowledgeBase, KnowledgeBaseHook } from '../types';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 export function useKnowledgeBase(): KnowledgeBaseHook {
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [currentKnowledgeBase, setCurrentKnowledgeBase] = useState("default");
 
   const fetchKnowledgeBases = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/knowledge_bases");
+      const response = await fetch(`${API_URL}/api/knowledge_bases`);
       if (response.ok) {
         const data = await response.json();
         setKnowledgeBases(data);
@@ -20,7 +22,7 @@ export function useKnowledgeBase(): KnowledgeBaseHook {
 
   const createKnowledgeBase = async (name: string, description: string): Promise<void> => {
     try {
-      const response = await fetch("http://localhost:5000/api/knowledge_base", {
+      const response = await fetch(`${API_URL}/api/knowledge_base`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, description }),
@@ -38,7 +40,7 @@ export function useKnowledgeBase(): KnowledgeBaseHook {
     
     try {
       const response = await fetch(
-        `http://localhost:5000/api/knowledge_base/${id}`,
+        `${API_URL}/api/knowledge_base/${id}`,
         { method: "DELETE" }
       );
       
@@ -58,7 +60,7 @@ export function useKnowledgeBase(): KnowledgeBaseHook {
     
     try {
       const response = await fetch(
-        `http://localhost:5000/api/knowledge_base/reset/${id}`,
+        `${API_URL}/api/knowledge_base/reset/${id}`,
         { method: "POST" }
       );
       if (response.ok) {

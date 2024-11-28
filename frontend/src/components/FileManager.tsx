@@ -50,6 +50,8 @@ interface FileManagerProps {
   onFilesChange: (files: FileInfo[]) => void; // 文件列表變更的函數
 }
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 export const FileManager: React.FC<FileManagerProps> = ({
   knowledgeBases,
   onBatchTranslateAndEmbed,
@@ -103,7 +105,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
         search: searchTerm
       });
       
-      const response = await fetch(`http://localhost:5000/api/files?${params}`);
+      const response = await fetch(`${API_URL}/api/files?${params}`);
       if (response.ok) {
         const data = await response.json();
         onFilesChange(data);
@@ -120,7 +122,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     if (!newFolderName) return;
     
     try {
-      const response = await fetch('http://localhost:5000/api/files/create_folder', {
+      const response = await fetch(`${API_URL}/api/files/create_folder`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -188,7 +190,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
 
     try {
       setIsUploading(true);
-      const response = await fetch('http://localhost:5000/api/files/upload', {
+      const response = await fetch(`${API_URL}/api/files/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -248,7 +250,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
 
       // 如果是資料夾，獲取資料夾內所有檔案
       if (isFolder && contextMenu?.target) {
-        const response = await fetch(`http://localhost:5000/api/files?path=${encodeURIComponent(contextMenu.target.path)}`);
+        const response = await fetch(`${API_URL}/api/files?path=${encodeURIComponent(contextMenu.target.path)}`);
         if (!response.ok) {
           throw new Error('無法獲取資料夾內容');
         }
@@ -319,7 +321,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     try {
       // 處理檔案路徑，確保正確編碼
       const encodedFileId = encodeURIComponent(fileId);
-      const response = await fetch(`http://localhost:5000/api/files/${encodedFileId}`, {
+      const response = await fetch(`${API_URL}/api/files/${encodedFileId}`, {
         method: 'DELETE'
       });
       
@@ -332,7 +334,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
         const fullPath = `${folderPath}/${fileId}`.replace(/^\/+/, '');
         const encodedFullPath = encodeURIComponent(fullPath);
         
-        const secondResponse = await fetch(`http://localhost:5000/api/files/${encodedFullPath}`, {
+        const secondResponse = await fetch(`${API_URL}/api/files/${encodedFullPath}`, {
           method: 'DELETE'
         });
         
@@ -352,7 +354,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
   const handleDeleteFolder = async (folderPath: string) => {
     try {
       const encodedPath = encodeURIComponent(folderPath);
-      const response = await fetch(`http://localhost:5000/api/files/folder/${encodedPath}`, {
+      const response = await fetch(`${API_URL}/api/files/folder/${encodedPath}`, {
         method: 'DELETE'
       });
 
@@ -409,7 +411,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
       console.log('準備下載檔案:', filePath);
       
       // 使用 GET 請求而不是 POST
-      const response = await fetch(`http://localhost:5000/api/files/download/${encodeURIComponent(filePath)}`);
+      const response = await fetch(`${API_URL}/api/files/download/${encodeURIComponent(filePath)}`);
 
       if (!response.ok) {
         throw new Error('下載失敗');
@@ -928,7 +930,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
 
                       try {
                         setIsUploading(true);
-                        const response = await fetch('http://localhost:5000/api/files/upload', {
+                        const response = await fetch('${API_URL}/api/files/upload', {
                           method: 'POST',
                           body: formData,
                         });
@@ -1036,7 +1038,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
         </div>
       )}
 
-      {/* 處理檔案模態框 */}
+      {/* 處理案模態框 */}
       {showActionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg w-96">

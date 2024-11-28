@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 添加一些基礎樣式 */
+body {
+  @apply bg-gray-50;
+}
+
+.sidebar {
+  @apply fixed left-0 top-0 h-full w-64 bg-white border-r;
+}
+
+/* 添加其他需要的自定義樣式 */

@@ -2,15 +2,15 @@
 import { useState, useEffect } from 'react';
 import { TranslatedFile, FileProcessingHook, FileWithMetadata } from '../types';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 export function useFileProcessing(): FileProcessingHook {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [translatedFiles, setTranslatedFiles] = useState<TranslatedFile[]>(() => {
-    // 從 localStorage 讀取已保存的翻譯文件
     const savedFiles = localStorage.getItem('translatedFiles');
     return savedFiles ? JSON.parse(savedFiles) : [];
   });
 
-  // 當 translatedFiles 改變時，保存到 localStorage
   useEffect(() => {
     localStorage.setItem('translatedFiles', JSON.stringify(translatedFiles));
   }, [translatedFiles]);
@@ -19,14 +19,13 @@ export function useFileProcessing(): FileProcessingHook {
     const fetchTranslations = async () => {
       try {
         console.log('開始獲取翻譯結果');
-        const response = await fetch('http://localhost:5000/api/translations');
+        const response = await fetch(`${API_URL}/api/translations`);
         console.log('API 響應狀態:', response.status);
         
         if (response.ok) {
           const data = await response.json() as TranslatedFile[];
           console.log('成功獲取翻譯數據:', data);
           setTranslatedFiles(prev => {
-            // 合併後端數據和本地數據，以 id 為鍵去重
             const mergedFiles = [...prev];
             data.forEach((newFile: TranslatedFile) => {
               const existingIndex = mergedFiles.findIndex(f => f.id === newFile.id);
@@ -57,8 +56,8 @@ export function useFileProcessing(): FileProcessingHook {
 
         const response = await fetch(
           file.needTranslation
-            ? 'http://localhost:5000/api/upload_and_translate'
-            : 'http://localhost:5000/api/upload',
+            ? `${API_URL}/api/upload_and_translate`
+            : `${API_URL}/api/upload`,
           {
             method: 'POST',
             body: formData,
@@ -114,7 +113,7 @@ export function useFileProcessing(): FileProcessingHook {
           )
         );
 
-        const response = await fetch("http://localhost:5000/api/embed", {
+        const response = await fetch(`${API_URL}/api/embed`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -154,7 +153,7 @@ export function useFileProcessing(): FileProcessingHook {
 
   const handleDelete = async (fileId: string) => {
     try {
-      await fetch(`http://localhost:5000/api/translations/${fileId}`, {
+      await fetch(`${API_URL}/api/translations/${fileId}`, {
         method: 'DELETE'
       });
       setTranslatedFiles(prev => prev.filter(file => file.id !== fileId));
