@@ -54,10 +54,12 @@ export const KnowledgeBaseManager: React.FC<KnowledgeBaseManagerProps> = ({
   }>({ show: false, message: '', type: 'success' });
   const [isLoading, setIsLoading] = useState(false);
 
+  const API_URL = process.env.REACT_APP_API_URL;
+
   // 獲取知識庫中的文件
   const fetchKnowledgeBaseFiles = async (kbId: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/knowledge_base/${kbId}/files`);
+      const response = await fetch(`${API_URL}/api/knowledge_base/${kbId}/files`);
       if (response.ok) {
         const files = await response.json();
         setKbFiles(prev => ({

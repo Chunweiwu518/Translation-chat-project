@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { Message, ChatSession, ModelSettings, ChatHook } from '../types';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 export function useChat(): ChatHook {
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>(() => {
@@ -83,7 +85,7 @@ export function useChat(): ChatHook {
 
     try {
       // 發送請求到後端
-      const response = await fetch("http://localhost:5000/api/query", {
+      const response = await fetch(`${API_URL}/api/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
