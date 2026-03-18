@@ -1,142 +1,143 @@
 <div align="center">
-  <img src="frontend/src/assets/images/logo.jpg" alt="Translation Assistant Logo" width="200"/>
+  <img src="frontend/src/assets/images/logo.jpg" alt="Translation Chat Project Logo" width="180" />
+
+  <h1>Translation Chat Project</h1>
+  <p>基於 RAG 的多語文件翻譯與知識庫對話助手。</p>
 </div>
 
-基於 RAG (檢索增強生成) 的智能翻譯助手系統，提供文件管理、知識庫對話及翻譯功能。
+`Translation Chat Project` 是一個以 **React + TypeScript** 前端與 **FastAPI** 後端打造的翻譯助手，支援文件上傳、知識庫檢索對話，以及多語翻譯流程。此專案適合用於內部知識整理、翻譯輔助與文件工作流自動化。
 
-[English](./README.md) | 繁體中文 | [日本語](./README_ja.md)
+## ✨ 功能特色
 
----
+- 上傳並管理 PDF、TXT、DOCX 等文件
+- 使用 ChromaDB 建立知識庫並進行檢索增強對話（RAG）
+- 提供翻譯流程與結果下載能力
+- 支援前後端分離部署與 Docker 啟動
 
-## 🌟 主要功能
+## 🖼️ 介面預覽
 
-### 1. 檔案管理
+### 檔案管理
 <div align="center">
-  <img src="frontend/src/assets/images/檔案管理介面.png" alt="檔案管理介面" width="800"/>
+  <img src="frontend/src/assets/images/檔案管理介面.png" alt="檔案管理介面" width="800" />
 </div>
 
-- 支援拖拽上傳和點擊選擇檔案
-- 支援 PDF、TXT、DOCX 等多種檔案格式
-- 檔案批次處理功能
-- 即時顯示上傳和處理進度
-
-### 2. 知識庫對話
+### 知識庫對話
 <div align="center">
-  <img src="frontend/src/assets/images/知識庫對話介面.png" alt="知識庫對話介面" width="800"/>
+  <img src="frontend/src/assets/images/知識庫對話介面.png" alt="知識庫對話介面" width="800" />
 </div>
 
-- 基於上傳文件的智能對話
-- 支援多種 AI 模型選擇
-- 對話歷史記錄保存
-- 知識庫內容檢索與管理
-
-### 3. 翻譯功能
+### 翻譯功能
 <div align="center">
-  <img src="frontend/src/assets/images/翻譯功能介面.png" alt="翻譯功能介面" width="800"/>
+  <img src="frontend/src/assets/images/翻譯功能介面.png" alt="翻譯功能介面" width="800" />
 </div>
 
-- 可選擇是否需要翻譯
-- 支援批次翻譯
-- 翻譯結果預覽和下載
-- 多語言支援
+## 🏗️ 技術架構
 
----
+### Frontend
+- React
+- TypeScript
+- Tailwind CSS
+- Lucide React
 
-## 🛠 技術架構
+### Backend
+- FastAPI
+- ChromaDB
+- LangChain
+- Python-docx / PDF parsing utilities
 
-### 前端
-- **React** + **TypeScript**
-- **Tailwind CSS**
-- **Lucide React** 圖標庫
+## 📁 專案結構
 
-### 後端
-- **Python FastAPI**
-- **ChromaDB** 向量資料庫
-- **LangChain** LLM 整合
-
----
+```text
+Translation-chat-project/
+├── frontend/              # React + TypeScript UI
+├── backend/               # FastAPI API 與 RAG / 翻譯邏輯
+├── docker-compose.yml     # 本機整合啟動設定
+├── nginx.conf             # 前端反向代理設定
+└── README.md
+```
 
 ## 🚀 快速開始
 
-### 系統需求
-- **Node.js** 18.0 或以上
-- **Python** 3.9 或以上
-- 至少 8GB RAM
+### 需求
 
-### 安裝步驟
+- Node.js 18+
+- Python 3.9+
+- Docker / Docker Compose（可選）
 
-#### 1. 克隆專案
+### 1. 下載原始碼
+
 ```bash
 git clone https://github.com/Chunweiwu518/Translation-chat-project.git
 cd Translation-chat-project
 ```
 
-#### 2. 安裝前端依賴
+### 2. 設定前端環境變數
+
+```bash
+copy frontend/.env.example frontend/.env
+```
+
+將 `REACT_APP_API_URL` 指向你的後端服務，例如本機 `http://localhost:8000`。
+
+### 3. 安裝前端依賴
+
 ```bash
 cd frontend
 npm install
-npm run build
+npm start
 ```
 
-#### 3. 設置後端環境
-確保安裝 Python 3.9 或以上，並啟用虛擬環境：
+### 4. 設定後端環境變數
+
 ```bash
-python -m venv venv
-source venv/bin/activate  # Windows 使用 venv\Scripts\activate
+cd ..
+copy backend/.env.example backend/.env
+```
+
+### 5. 安裝後端依賴
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
+uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### 4. 啟動 Docker 容器
-使用提供的 `docker-compose.yml` 啟動所有服務：
+## 🔧 環境變數
+
+### Frontend (`frontend/.env`)
+
+- `REACT_APP_API_URL`: 前端呼叫的後端 API 位址
+
+### Backend (`backend/.env`)
+
+- `MODEL_NAME`: 使用的模型名稱
+- `SOURCE_LANG`: 預設來源語言
+- `TARGET_LANG`: 預設目標語言
+- `COUNTRY`: 語系 / 地區設定
+- `API_KEY`: 模型或翻譯服務 API 金鑰
+- `API_URL`: 模型服務 API 位址
+- `API_HOST`: 模型服務 Host
+- `CHROMA_PATH`: 向量資料庫儲存位置
+
+## 🐳 Docker 啟動
+
+如果你希望使用容器啟動整個系統：
+
 ```bash
-docker-compose up -d
+docker compose up --build
 ```
 
----
+## 🤝 貢獻方式
 
-## 📂 檔案結構
+歡迎透過 Issue 或 Pull Request 參與改進。建議貢獻流程：
 
-```
-Translation-Chat-Assistant/
-│
-├── frontend/                # 前端程式碼 (React + TypeScript)
-├── backend/                 # 後端程式碼 (FastAPI)
-├── docker-compose.yml       # Docker 組態檔
-├── Dockerfile               # 後端 Docker 構建檔
-├── README.md                # 專案說明
-└── requirements.txt         # Python 套件依賴
-```
+1. Fork 此專案
+2. 建立功能分支
+3. 提交清楚的 commit message
+4. 附上測試或驗證方式
 
----
+## 📄 License
 
-## 🔧 配置詳情
-
-### 環境變數
-確保創建 `.env` 文件並設置必要變數，例如：
-```env
-LLM_API_KEY=<your-api-key>
-DATABASE_URL=<chroma-db-url>
-```
-
-### Docker 化
-專案已基於 Docker 優化，詳細配置請參考以下檔案：
-- **`docker-compose.yml`**: 包含多服務配置，例如資料庫及後端應用。
-- **`Dockerfile`**: 快速構建後端容器。
-
----
-
-## 🤝 貢獻指南
-
-歡迎參與此專案的開發，提交 Issue 或 PR 時，請遵守以下規範：
-1. 確保代碼通過單元測試。
-2. 撰寫詳細的提交信息。
-3. 提供必要的代碼註解。
-
----
-
-## 📄 授權條款
-
-此專案採用 [MIT 授權條款](LICENSE)。
-```
-
-如果需要針對具體功能或其他細節進行修改，請隨時告知！
+本專案採用 [MIT License](./LICENSE)。
